@@ -1,0 +1,707 @@
+"""
+archive_tree.py  ——  档案目录树（三层结构）
+
+层级：
+  批次（第一层，可重命名）
+    └─ 模板名称（第二层，如 电网建设 / 文书）
+         └─ 年份（第三层，如 2024）
+"""
+
+from __future__ import annotations
+
+from typing import Optional
+
+from PyQt6.QtCore import Qt, pyqtSignal, QSortFilterProxyModel, QModelIndex
+from PyQt6.QtGui import (
+    QStandardItemModel,
+    QStandardItem,
+    QFont,
+    QColor,
+    QBrush,
+    QIcon,
+)
+from PyQt6.QtWidgets import (
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QTreeView,
+    QLineEdit,
+    QLabel,
+    QPushButton,
+    QDialog,
+    QFormLayout,
+    QComboBox,
+    QSpinBox,
+    QDialogButtonBox,
+    QMessageBox,
+    QHeaderView,
+    QAbstractItemView,
+    QMenu,
+    QInputDialog,
+)
+
+# ──────────────────────────────────────────────
+#  数据层（可替换为真实 DB / 文件系统）
+# ──────────────────────────────────────────────
+
+# 模板列表（可扩展）
+TEMPLATE_NAMES: list[str] = [
+    "电网建设",
+    "文书",
+    "财务凭证",
+    "人事档案",
+    "工程图纸",
+]
+
+# 内存示例数据  {batch_name: {template: [year, ...]}}
+_DEMO_DATA: dict[str, dict[str, list[int]]] = {
+    "2024年第一批": {
+        "电网建设": [2022, 2023, 2024],
+        "文书": [2023, 2024],
+    },
+    "2023年归档批次": {
+        "财务凭证": [2021, 2022, 2023],
+        "人事档案": [2022, 2023],
+    },
+}
+
+
+# ──────────────────────────────────────────────
+#  自定义条目角色
+# ──────────────────────────────────────────────
+LEVEL_ROLE = Qt.ItemDataRole.UserRole + 1   # "batch" | "template" | "year"
+DATA_ROLE  = Qt.ItemDataRole.UserRole + 2   # 原始数据（名称或年份整数）
+
+
+# ──────────────────────────────────────────────
+#  新建批次对话框
+# ──────────────────────────────────────────────
+class NewBatchDialog(QDialog):
+    """选择模板名称 + 起始年度，填写批次名称"""
+
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("新建批次")
+        self.setMinimumWidth(340)
+        self.setModal(True)
+        self._build_ui()
+
+    def _build_ui(self) -> None:
+        layout = QVBoxLayout(self)
+        layout.setSpacing(16)
+        layout.setContentsMargins(20, 20, 20, 16)
+
+        # 标题行
+        title_lbl = QLabel("新建档案批次")
+        title_lbl.setStyleSheet(
+            "font-size: 15px; font-weight: bold; color: #1E40AF;"
+        )
+        layout.addWidget(title_lbl)
+
+        # 表单
+        form = QFormLayout()
+        form.setSpacing(10)
+        form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
+
+        # 批次名称
+        self.batch_name_edit = QLineEdit()
+        self.batch_name_edit.setPlaceholderText("例：2025年第一批")
+        form.addRow("批次名称：", self.batch_name_edit)
+
+        # 模板
+        self.template_combo = QComboBox()
+        self.template_combo.addItems(TEMPLATE_NAMES)
+        form.addRow("模板类型：", self.template_combo)
+
+        # 年度（支持多选范围：起始 ~ 结束）
+        year_widget = QWidget()
+        year_layout = QHBoxLayout(year_widget)
+        year_layout.setContentsMargins(0, 0, 0, 0)
+        year_layout.setSpacing(6)
+
+        self.year_from = QSpinBox()
+        self.year_from.setRange(1980, 2100)
+        self.year_from.setValue(2024)
+
+        sep = QLabel("至")
+        sep.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.year_to = QSpinBox()
+        self.year_to.setRange(1980, 2100)
+        self.year_to.setValue(2024)
+
+        year_layout.addWidget(self.year_from)
+        year_layout.addWidget(sep)
+        year_layout.addWidget(self.year_to)
+        form.addRow("年度范围：", year_widget)
+
+        layout.addLayout(form)
+
+        # 提示
+        hint = QLabel("年度范围将作为第三层节点展开在模板下方。")
+        hint.setStyleSheet("color: #6B7280; font-size: 11px;")
+        hint.setWordWrap(True)
+        layout.addWidget(hint)
+
+        # 按钮
+        btn_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok
+            | QDialogButtonBox.StandardButton.Cancel
+        )
+        btn_box.button(QDialogButtonBox.StandardButton.Ok).setText("创建")
+        btn_box.button(QDialogButtonBox.StandardButton.Cancel).setText("取消")
+        btn_box.accepted.connect(self._validate_and_accept)
+        btn_box.rejected.connect(self.reject)
+        layout.addWidget(btn_box)
+
+        # 样式
+        self.setStyleSheet(
+            """
+            QDialog { background: #FFFFFF; }
+            QLineEdit, QComboBox, QSpinBox {
+                border: 1px solid #D1D5DB;
+                border-radius: 4px;
+                padding: 4px 8px;
+                font-size: 13px;
+            }
+            QLineEdit:focus, QComboBox:focus, QSpinBox:focus {
+                border-color: #3B82F6;
+            }
+            QPushButton {
+                padding: 5px 16px;
+                border-radius: 4px;
+                font-size: 13px;
+            }
+            QPushButton[text="创建"] {
+                background: #1E40AF;
+                color: white;
+                border: none;
+            }
+            QPushButton[text="创建"]:hover { background: #1D4ED8; }
+            QPushButton[text="取消"] {
+                background: #F3F4F6;
+                border: 1px solid #D1D5DB;
+            }
+            """
+        )
+
+    def _validate_and_accept(self) -> None:
+        if not self.batch_name_edit.text().strip():
+            QMessageBox.warning(self, "提示", "请填写批次名称。")
+            return
+        if self.year_from.value() > self.year_to.value():
+            QMessageBox.warning(self, "提示", "起始年度不能大于结束年度。")
+            return
+        self.accept()
+
+    # ── 结果取值 ──
+    def batch_name(self) -> str:
+        return self.batch_name_edit.text().strip()
+
+    def template_name(self) -> str:
+        return self.template_combo.currentText()
+
+    def year_range(self) -> list[int]:
+        return list(range(self.year_from.value(), self.year_to.value() + 1))
+
+
+# ──────────────────────────────────────────────
+#  档案树组件
+# ──────────────────────────────────────────────
+class ArchiveTree(QWidget):
+    """
+    三层档案目录树
+
+    信号:
+        record_selected(batch, template, year)   ── 点击年份节点
+        batch_selected(batch)                    ── 点击批次节点
+    """
+
+    record_selected = pyqtSignal(str, str, int)
+    batch_selected  = pyqtSignal(str)
+
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        super().__init__(parent)
+        self._data: dict[str, dict[str, list[int]]] = dict(_DEMO_DATA)
+        self._build_ui()
+        self._populate()
+
+    # ── 构建 UI ──
+    def _build_ui(self) -> None:
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        # 数据模型 + 过滤代理
+        self._model = QStandardItemModel()
+        self._model.setHorizontalHeaderLabels(["档案目录"])
+
+        self._proxy = QSortFilterProxyModel()
+        self._proxy.setSourceModel(self._model)
+        self._proxy.setFilterCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+        self._proxy.setRecursiveFilteringEnabled(True)
+        self._proxy.setFilterKeyColumn(0)
+
+        # 树视图
+        self.tree_widget = QTreeView()
+        self.tree_widget.setModel(self._proxy)
+        self.tree_widget.setHeaderHidden(True)
+        self.tree_widget.setAnimated(True)
+        self.tree_widget.setIndentation(18)
+        self.tree_widget.setEditTriggers(
+            QAbstractItemView.EditTrigger.DoubleClicked
+            | QAbstractItemView.EditTrigger.EditKeyPressed
+        )
+        self.tree_widget.setContextMenuPolicy(
+            Qt.ContextMenuPolicy.CustomContextMenu
+        )
+        self.tree_widget.customContextMenuRequested.connect(self._on_context_menu)
+        self.tree_widget.clicked.connect(self._on_item_clicked)
+        self.tree_widget.setStyleSheet(self._tree_style())
+
+        # 阻止用户直接编辑（只允许通过重命名菜单）
+        self._model.itemChanged.connect(self._on_item_renamed)
+
+        layout.addWidget(self.tree_widget)
+
+    # ── 填充数据 ──
+    def _populate(self) -> None:
+        self._model.removeRows(0, self._model.rowCount())
+
+        for batch_name, templates in self._data.items():
+            batch_item = self._make_item(
+                batch_name, level="batch", icon="📦", bold=True, color="#1E3A8A"
+            )
+            batch_item.setFlags(
+                batch_item.flags()
+                | Qt.ItemFlag.ItemIsEditable  # 允许重命名
+            )
+
+            for tmpl_name, years in templates.items():
+                tmpl_item = self._make_item(
+                    tmpl_name, level="template", icon="📂", color="#374151"
+                )
+                tmpl_item.setFlags(
+                    tmpl_item.flags() & ~Qt.ItemFlag.ItemIsEditable
+                )
+
+                for year in sorted(years):
+                    year_item = self._make_item(
+                        str(year), level="year", icon="📅",
+                        color="#4B5563", small=True
+                    )
+                    year_item.setData(year, DATA_ROLE)
+                    year_item.setFlags(
+                        year_item.flags() & ~Qt.ItemFlag.ItemIsEditable
+                    )
+                    tmpl_item.appendRow(year_item)
+
+                batch_item.appendRow(tmpl_item)
+
+            self._model.appendRow(batch_item)
+
+        self.tree_widget.expandAll()
+
+    # ── 条目工厂 ──
+    @staticmethod
+    def _make_item(
+        text: str,
+        *,
+        level: str,
+        icon: str = "",
+        bold: bool = False,
+        color: str = "#111827",
+        small: bool = False,
+    ) -> QStandardItem:
+        item = QStandardItem(f"{icon}  {text}" if icon else text)
+        item.setData(level, LEVEL_ROLE)
+        item.setData(text,  DATA_ROLE)
+
+        font = QFont("Microsoft YaHei", 11 if not small else 10)
+        font.setBold(bold)
+        item.setFont(font)
+        item.setForeground(QBrush(QColor(color)))
+
+        return item
+
+    # ── 点击处理 ──
+    def _on_item_clicked(self, proxy_index: QModelIndex) -> None:
+        src_index = self._proxy.mapToSource(proxy_index)
+        item = self._model.itemFromIndex(src_index)
+        if item is None:
+            return
+
+        level: str = item.data(LEVEL_ROLE)
+        raw         = item.data(DATA_ROLE)
+
+        if level == "batch":
+            self.batch_selected.emit(raw)
+        elif level == "year":
+            tmpl_item  = item.parent()
+            batch_item = tmpl_item.parent() if tmpl_item else None
+            if tmpl_item and batch_item:
+                self.record_selected.emit(
+                    batch_item.data(DATA_ROLE),
+                    tmpl_item.data(DATA_ROLE),
+                    int(raw),
+                )
+
+    # ── 搜索过滤 ──
+    def _on_search(self, text: str) -> None:
+        self._proxy.setFilterFixedString(text)
+        if text:
+            self.tree_widget.expandAll()
+
+    # ── 刷新 ──
+    def refresh(self) -> None:
+        self._populate()
+
+    # ── 新建批次 ──
+    def create_new_batch(self) -> None:
+        dlg = NewBatchDialog(self)
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return
+
+        batch  = dlg.batch_name()
+        tmpl   = dlg.template_name()
+        years  = dlg.year_range()
+
+        if batch in self._data:
+            # 批次已存在：追加模板 / 年份
+            if tmpl not in self._data[batch]:
+                self._data[batch][tmpl] = years
+            else:
+                existing = set(self._data[batch][tmpl])
+                self._data[batch][tmpl] = sorted(existing | set(years))
+        else:
+            self._data[batch] = {tmpl: years}
+
+        self._populate()
+
+    # ── 删除选中批次 ──
+    def delete_selected_batch(self) -> bool:
+        """删除当前选中的批次节点，返回是否成功。"""
+        idx = self.tree_widget.currentIndex()
+        src = self._proxy.mapToSource(idx)
+        item = self._model.itemFromIndex(src)
+        if item is None or item.data(LEVEL_ROLE) != "batch":
+            return False
+
+        batch_name: str = item.data(DATA_ROLE)
+        reply = QMessageBox.question(
+            self,
+            "确认删除",
+            f"确定要删除批次「{batch_name}」及其所有档案吗？",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return False
+
+        self._data.pop(batch_name, None)
+        self._populate()
+        return True
+
+    # ── 右键菜单 ──
+    def _on_context_menu(self, pos) -> None:
+        proxy_idx = self.tree_widget.indexAt(pos)
+        if not proxy_idx.isValid():
+            return
+
+        src   = self._proxy.mapToSource(proxy_idx)
+        item  = self._model.itemFromIndex(src)
+        level = item.data(LEVEL_ROLE) if item else None
+
+        menu = QMenu(self)
+        menu.setStyleSheet(
+            "QMenu { border: 1px solid #E5E7EB; border-radius: 6px; }"
+            "QMenu::item { padding: 6px 24px; font-size: 13px; }"
+            "QMenu::item:selected { background: #EFF6FF; color: #1D4ED8; }"
+        )
+
+        if level == "batch":
+            act_rename = menu.addAction("✏️  重命名批次")
+            act_delete = menu.addAction("🗑️  删除批次")
+            menu.addSeparator()
+            act_add_tmpl = menu.addAction("➕  添加模板/年度")
+
+            chosen = menu.exec(self.tree_widget.viewport().mapToGlobal(pos))
+
+            if chosen == act_rename:
+                self.tree_widget.edit(proxy_idx)
+            elif chosen == act_delete:
+                self.delete_selected_batch()
+            elif chosen == act_add_tmpl:
+                self._add_template_to_batch(item)
+
+        elif level == "template":
+            act_add_year = menu.addAction("➕  添加年份")
+            act_del_tmpl = menu.addAction("🗑️  删除此模板")
+
+            chosen = menu.exec(self.tree_widget.viewport().mapToGlobal(pos))
+
+            if chosen == act_add_year:
+                self._add_year_to_template(item)
+            elif chosen == act_del_tmpl:
+                self._delete_template(item)
+
+        elif level == "year":
+            act_del_year = menu.addAction("🗑️  删除此年份")
+            chosen = menu.exec(self.tree_widget.viewport().mapToGlobal(pos))
+            if chosen == act_del_year:
+                self._delete_year(item)
+
+    # ── 批次重命名回调 ──
+    def _on_item_renamed(self, item: QStandardItem) -> None:
+        if item.data(LEVEL_ROLE) != "batch":
+            return
+
+        old_name: str = item.data(DATA_ROLE)
+        # 提取纯名称（去掉 icon 前缀）
+        new_display = item.text().strip()
+        new_name    = new_display.replace("📦  ", "").replace("📦 ", "").strip()
+
+        if not new_name or new_name == old_name:
+            # 还原显示文字
+            item.setText(f"📦  {old_name}")
+            return
+
+        if new_name in self._data:
+            QMessageBox.warning(self, "提示", f"批次名称「{new_name}」已存在。")
+            item.setText(f"📦  {old_name}")
+            return
+
+        # 更新数据层
+        self._data[new_name] = self._data.pop(old_name)
+        item.setData(new_name, DATA_ROLE)
+        item.setText(f"📦  {new_name}")
+
+    # ── 辅助：给批次添加模板/年度 ──
+    def _add_template_to_batch(self, batch_item: QStandardItem) -> None:
+        batch_name: str = batch_item.data(DATA_ROLE)
+        dlg = NewBatchDialog(self)
+        dlg.setWindowTitle("添加模板/年度")
+        dlg.batch_name_edit.setText(batch_name)
+        dlg.batch_name_edit.setEnabled(False)
+
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return
+
+        tmpl  = dlg.template_name()
+        years = dlg.year_range()
+
+        if tmpl not in self._data[batch_name]:
+            self._data[batch_name][tmpl] = years
+        else:
+            existing = set(self._data[batch_name][tmpl])
+            self._data[batch_name][tmpl] = sorted(existing | set(years))
+
+        self._populate()
+
+    # ── 辅助：给模板节点添加年份 ──
+    def _add_year_to_template(self, tmpl_item: QStandardItem) -> None:
+        batch_item = tmpl_item.parent()
+        if batch_item is None:
+            return
+        batch_name: str = batch_item.data(DATA_ROLE)
+        tmpl_name:  str = tmpl_item.data(DATA_ROLE)
+
+        year, ok = QInputDialog.getInt(
+            self, "添加年份", "请输入年份：", 2024, 1980, 2100
+        )
+        if not ok:
+            return
+
+        years = self._data[batch_name].get(tmpl_name, [])
+        if year not in years:
+            years.append(year)
+            self._data[batch_name][tmpl_name] = sorted(years)
+            self._populate()
+
+    # ── 辅助：删除模板 ──
+    def _delete_template(self, tmpl_item: QStandardItem) -> None:
+        batch_item = tmpl_item.parent()
+        if batch_item is None:
+            return
+        batch_name: str = batch_item.data(DATA_ROLE)
+        tmpl_name:  str = tmpl_item.data(DATA_ROLE)
+
+        reply = QMessageBox.question(
+            self, "确认删除",
+            f"删除模板「{tmpl_name}」及其所有年份？",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            self._data[batch_name].pop(tmpl_name, None)
+            self._populate()
+
+    # ── 辅助：删除年份 ──
+    def _delete_year(self, year_item: QStandardItem) -> None:
+        tmpl_item  = year_item.parent()
+        batch_item = tmpl_item.parent() if tmpl_item else None
+        if tmpl_item is None or batch_item is None:
+            return
+
+        batch_name: str = batch_item.data(DATA_ROLE)
+        tmpl_name:  str = tmpl_item.data(DATA_ROLE)
+        year: int       = year_item.data(DATA_ROLE)
+
+        years = self._data[batch_name].get(tmpl_name, [])
+        if year in years:
+            years.remove(year)
+            self._populate()
+
+    # ── 树视图样式 ──
+    @staticmethod
+    def _tree_style() -> str:
+        return """
+        QTreeView {
+            background: #FFFFFF;
+            border: none;
+            font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+            font-size: 13px;
+            outline: none;
+        }
+        QTreeView::item {
+            padding: 5px 4px;
+            border-radius: 4px;
+        }
+        QTreeView::item:hover {
+            background: #EFF6FF;
+        }
+        QTreeView::item:selected {
+            background: #DBEAFE;
+            color: #1E40AF;
+        }
+        QTreeView::branch {
+            background: transparent;
+        }
+        QTreeView::branch:has-siblings:!adjoins-item {
+            border-image: none;
+        }
+        QTreeView::branch:open:has-children {
+            image: none;
+        }
+        QTreeView::branch:closed:has-children {
+            image: none;
+        }
+        """
+
+
+# ──────────────────────────────────────────────
+#  集成到右侧面板（_create_right_panel 适配版）
+# ──────────────────────────────────────────────
+class RightPanel(QWidget):
+    """
+    示范如何把 ArchiveTree 嵌入原 _create_right_panel 逻辑。
+    将此类的 _build 方法内容替换原函数即可。
+    """
+
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        super().__init__(parent)
+        self._build()
+
+    def _build(self) -> None:
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        # ── 头部 ──
+        header = QWidget()
+        header.setStyleSheet(
+            "QWidget { background: #1E40AF; border-radius: 8px 8px 0 0; }"
+        )
+        h_layout = QHBoxLayout(header)
+        h_layout.setContentsMargins(10, 6, 10, 6)
+        title = QLabel("📁 档案目录")
+        title.setStyleSheet("color: white; font-weight: bold; font-size: 12px;")
+        h_layout.addWidget(title)
+        h_layout.addStretch()
+        layout.addWidget(header)
+
+        # ── 搜索框 ──
+        search_widget = QWidget()
+        search_widget.setStyleSheet("QWidget { background: #FFFFFF; padding: 6px 8px; }")
+        s_layout = QHBoxLayout(search_widget)
+        s_layout.setContentsMargins(0, 0, 0, 0)
+        self.tree_search_edit = QLineEdit()
+        self.tree_search_edit.setPlaceholderText("搜索档案…")
+        s_layout.addWidget(self.tree_search_edit)
+        layout.addWidget(search_widget)
+
+        # ── 档案树 ──
+        self.archive_tree = ArchiveTree()
+        self.archive_tree.record_selected.connect(self._on_tree_record_selected)
+        self.archive_tree.batch_selected.connect(self._on_tree_batch_selected)
+        layout.addWidget(self.archive_tree, stretch=1)
+
+        # ── 底部工具栏 ──
+        footer = QWidget()
+        footer.setStyleSheet(
+            "QWidget { background: #F9FAFB; border-top: 1px solid #E5E7EB; }"
+        )
+        f_layout = QHBoxLayout(footer)
+        f_layout.setContentsMargins(4, 2, 4, 2)
+        f_layout.setSpacing(2)
+
+        btn_cfg = [
+            ("＋",  "newBatchBtn",     "新建批次",   self._on_new_batch,   True),
+            ("×",   "deleteBatchBtn",  "删除批次",   self._on_delete_batch, False),
+            ("↻",   "treeRefreshBtn",  "刷新目录",   self.archive_tree.refresh, True),
+            ("⊞",   "treeExpandBtn",   "展开所有",
+             lambda: self.archive_tree.tree_widget.expandAll(), True),
+            ("⊟",   "treeCollapseBtn", "收起所有",
+             lambda: self.archive_tree.tree_widget.collapseAll(), True),
+        ]
+
+        self._btns: dict[str, QPushButton] = {}
+        for text, obj_name, tip, slot, enabled in btn_cfg:
+            btn = QPushButton(text)
+            btn.setObjectName(obj_name)
+            btn.setFixedSize(24, 24)
+            btn.setToolTip(tip)
+            btn.clicked.connect(slot)
+            btn.setEnabled(enabled)
+            f_layout.addWidget(btn)
+            self._btns[obj_name] = btn
+
+        f_layout.addStretch()
+        layout.addWidget(footer)
+
+        # ── 连线 ──
+        self.tree_search_edit.textChanged.connect(self.archive_tree._on_search)
+        self.archive_tree.batch_selected.connect(
+            lambda _: self._btns["deleteBatchBtn"].setEnabled(True)
+        )
+
+    # ── 槽 ──
+    def _on_new_batch(self) -> None:
+        self.archive_tree.create_new_batch()
+
+    def _on_delete_batch(self) -> None:
+        deleted = self.archive_tree.delete_selected_batch()
+        if deleted:
+            self._btns["deleteBatchBtn"].setEnabled(False)
+
+    def _on_tree_record_selected(self, batch: str, template: str, year: int) -> None:
+        print(f"[record_selected] batch={batch}  template={template}  year={year}")
+
+    def _on_tree_batch_selected(self, batch: str) -> None:
+        print(f"[batch_selected] batch={batch}")
+
+
+# ──────────────────────────────────────────────
+#  独立运行预览
+# ──────────────────────────────────────────────
+if __name__ == "__main__":
+    import sys
+    from PyQt6.QtWidgets import QApplication
+
+    app = QApplication(sys.argv)
+    app.setStyle("Fusion")
+
+    win = RightPanel()
+    win.setWindowTitle("档案目录树预览")
+    win.resize(300, 600)
+    win.show()
+
+    sys.exit(app.exec())
