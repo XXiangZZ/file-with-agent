@@ -16,6 +16,7 @@ from ui.pages.draft_page import DraftPage
 from ui.pages.search_page import SearchPage
 from ui.pages.stats_page import StatsPage
 from ui.pages.excel_import_page import ExcelImportPage
+from ui.pages.template_field_page import TemplateFieldPage
 
 from core.logger import Logger
 
@@ -135,6 +136,7 @@ class MainWindow(QMainWindow):
             "📋 草稿管理",
             "🔍 检索核对",
             "📊 台账统计",
+            "⚙️ 模板管理",
             "📑 Excel导入"
         ]
 
@@ -256,6 +258,7 @@ class MainWindow(QMainWindow):
         self.pages["draft"] = DraftPage()
         self.pages["search"] = SearchPage()
         self.pages["stats"] = StatsPage()
+        self.pages["template"] = TemplateFieldPage()
         self.pages["excel"] = ExcelImportPage()
 
         # 将 EntryPage 的按钮栏移动到标题栏
@@ -272,6 +275,7 @@ class MainWindow(QMainWindow):
         self.page_stack.addWidget(self.pages["draft"])
         self.page_stack.addWidget(self.pages["search"])
         self.page_stack.addWidget(self.pages["stats"])
+        self.page_stack.addWidget(self.pages["template"])
         self.page_stack.addWidget(self.pages["excel"])
 
         self.pages["draft"].draft_load_requested.connect(self._on_load_draft_to_entry)
@@ -281,6 +285,7 @@ class MainWindow(QMainWindow):
             "草稿管理",
             "检索核对",
             "台账统计",
+            "模板管理",
             "Excel批量导入"
         ]
 
