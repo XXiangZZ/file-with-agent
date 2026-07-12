@@ -21,7 +21,20 @@ class RecordDetailDialog(QDialog):
         super().__init__(parent)
         self.record = record
         self.setWindowTitle("档案详情")
-        self.setFixedSize(600, 500)
+        self.setMinimumSize(600, 500)
+        self.resize(650, 600)
+
+        # 从模板动态获取字段显示名称（不写死字段）
+        self._field_names = {}
+        template_id = record.get('template_id')
+        if template_id:
+            from core.template_manager import TemplateManager
+            tm = TemplateManager()
+            tmpl_name = tm.get_template_name(template_id)
+            if tmpl_name:
+                for f in tm.get_fields(tmpl_name):
+                    self._field_names[f['key']] = f['name']
+
         self._init_ui()
     
     def _init_ui(self):
@@ -42,52 +55,50 @@ class RecordDetailDialog(QDialog):
         info_layout.addRow("审核状态:", QLabel(self.record.get('review_status', '')))
         info_layout.addRow("录入时间:", QLabel(self.record.get('created_at', '')))
         info_layout.addRow("更新时间:", QLabel(self.record.get('updated_at', '')))
+
+        # 字段统计
+        template_count = len(self._field_names)
+        value_count = len(self.record.get('values', {}))
+        diff = template_count - value_count
+        if diff == 0:
+            stats_text = f"模板字段: {template_count}（已全部填写）"
+        else:
+            stats_text = f"模板字段: {template_count}    当前记录: {value_count}（缺少 {diff} 个字段）"
+        info_layout.addRow("字段统计:", QLabel(stats_text))
+
         content_layout.addWidget(info_group)
-        
-        # 字段值
+
+        # 字段值 — 按模板字段顺序遍历，缺失的显示"无"
         values = self.record.get('values', {})
-        if values:
+        if self._field_names:
             fields_group = QGroupBox("字段内容")
-            fields_layout = QFormLayout(fields_group)
-            
-            # 定义字段名映射
-            field_name_map = {
-                'file_no': '档案编号',
-                'title': '题名',
-                'subject': '主题',
-                'date': '日期',
-                'year': '年度',
-                'retention': '保管期限',
-                'security': '密级',
-                'category': '分类号',
-                'archive_type': '档案类型',
-                'fonds': '全宗号',
-                'dept': '部门',
-                'bumen': '部门',
-                'department': '部门',
-                'zerenzhe': '责任者',
-                'wentiming': '文件题名',
-                'wenjianriqi': '文件日期',
-                'fenleihao': '分类号',
-                'leimingcheng': '类目名称',
-                'baoguanqixian': '保管期限',
-                'niandu': '年度',
-                'miji': '密级',
-                'filename': '文件名'
-            }
-            
-            for key, value in values.items():
-                display_name = field_name_map.get(key, key)
-                # 长文本使用 QTextEdit
-                if len(str(value)) > 50:
+            fields_layout = QVBoxLayout(fields_group)
+
+            # 字段区域可滚动
+            field_scroll = QScrollArea()
+            field_scroll.setWidgetResizable(True)
+            field_scroll.setMaximumHeight(400)
+            field_scroll_widget = QWidget()
+            field_scroll_layout = QFormLayout(field_scroll_widget)
+
+            for field_key, field_name in self._field_names.items():
+                value = values.get(field_key, '')
+                if value and str(value).strip():
+                    display_value = str(value)
+                else:
+                    display_value = "无"
+
+                if len(display_value) > 50:
                     text_edit = QTextEdit()
-                    text_edit.setPlainText(str(value))
+                    text_edit.setPlainText(display_value)
                     text_edit.setReadOnly(True)
                     text_edit.setMaximumHeight(80)
-                    fields_layout.addRow(display_name + ":", text_edit)
+                    field_scroll_layout.addRow(field_name + ":", text_edit)
                 else:
-                    fields_layout.addRow(display_name + ":", QLabel(str(value)))
-            
+                    field_scroll_layout.addRow(field_name + ":", QLabel(display_value))
+
+            field_scroll.setWidget(field_scroll_widget)
+            fields_layout.addWidget(field_scroll)
             content_layout.addWidget(fields_group)
         
         scroll_area.setWidget(content_widget)

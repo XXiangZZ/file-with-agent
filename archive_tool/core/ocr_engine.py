@@ -10,7 +10,12 @@ from PIL import Image
 # 日志
 # ──────────────────────────────────────────────
 def log_ocr(msg):
-    print(msg)
+    try:
+        print(msg)
+    except UnicodeEncodeError:
+        print(msg.encode("gbk", errors="replace").decode("gbk"))
+    except Exception:
+        pass
     try:
         log_dir = os.path.dirname(sys.executable)
         log_file = os.path.join(log_dir, 'ocr_debug.log')
