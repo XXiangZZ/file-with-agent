@@ -15,6 +15,7 @@ from ui.pages.entry_page import EntryPage
 from ui.pages.draft_page import DraftPage
 from ui.pages.search_page import SearchPage
 from ui.pages.stats_page import StatsPage
+from ui.pages.log_page import LogPage
 from ui.pages.excel_import_page import ExcelImportPage
 from ui.pages.template_field_page import TemplateFieldPage
 
@@ -136,6 +137,7 @@ class MainWindow(QMainWindow):
             "📋 草稿管理",
             "🔍 检索核对",
             "📊 台账统计",
+            "📜 操作日志",
             "⚙️ 模板管理",
             "📑 Excel导入"
         ]
@@ -258,6 +260,7 @@ class MainWindow(QMainWindow):
         self.pages["draft"] = DraftPage()
         self.pages["search"] = SearchPage()
         self.pages["stats"] = StatsPage()
+        self.pages["log"] = LogPage()
         self.pages["template"] = TemplateFieldPage()
         self.pages["excel"] = ExcelImportPage()
 
@@ -275,6 +278,7 @@ class MainWindow(QMainWindow):
         self.page_stack.addWidget(self.pages["draft"])
         self.page_stack.addWidget(self.pages["search"])
         self.page_stack.addWidget(self.pages["stats"])
+        self.page_stack.addWidget(self.pages["log"])
         self.page_stack.addWidget(self.pages["template"])
         self.page_stack.addWidget(self.pages["excel"])
 
@@ -285,6 +289,7 @@ class MainWindow(QMainWindow):
             "草稿管理",
             "检索核对",
             "台账统计",
+            "操作日志",
             "模板管理",
             "Excel批量导入"
         ]
@@ -444,15 +449,6 @@ class MainWindow(QMainWindow):
         )
 
         if reply == QMessageBox.StandardButton.Yes:
-
-            self.logger.log(
-                "exit",
-                {
-                    "action":
-                    "application_exit"
-                }
-            )
-
             event.accept()
 
         else:

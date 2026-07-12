@@ -500,8 +500,6 @@ class SearchPage(QWidget):
         
         # 显示结果
         self._display_results()
-        
-        self.logger.log('advanced_search', {'conditions': conditions, 'count': len(self.search_results)})
 
     def _display_results(self):
         """显示检索结果"""

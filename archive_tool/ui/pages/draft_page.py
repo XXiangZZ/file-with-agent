@@ -324,6 +324,6 @@ class DraftPage(QWidget):
             f'确定要删除草稿「{draft_name}」吗？')
         if reply == QMessageBox.StandardButton.Yes:
             self.draft_manager.delete_draft(draft_id)
-            self.logger.log('delete_draft', {'draft_id': draft_id})
+            self.logger.log('delete_draft', {'draft_id': draft_id, 'draft_name': draft_name})
             self._load_drafts()
             QMessageBox.information(self, '提示', '删除成功')

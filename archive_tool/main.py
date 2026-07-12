@@ -49,11 +49,6 @@ def main():
     window = MainWindow()
     window.show()
 
-    # 记录启动日志
-    from core.logger import Logger
-    logger = Logger()
-    logger.log('startup', {'version': 'V1.0'})
-
     # 运行应用
     result = app.exec()
 
