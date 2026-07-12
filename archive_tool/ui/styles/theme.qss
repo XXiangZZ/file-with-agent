@@ -108,6 +108,22 @@ QPushButton[class="danger"]:hover {
     );
 }
 
+/* 次要按钮（白底黑字） */
+QPushButton[class="secondary"] {
+    background-color: #FFFFFF;
+    color: #1F2937;
+    border: 1px solid #D1D5DB;
+}
+
+QPushButton[class="secondary"]:hover {
+    background-color: #F3F4F6;
+    border-color: #9CA3AF;
+}
+
+QPushButton[class="secondary"]:pressed {
+    background-color: #E5E7EB;
+}
+
 /* ============ 输入类控件统一风格 ============ */
 QLineEdit,
 QTextEdit,

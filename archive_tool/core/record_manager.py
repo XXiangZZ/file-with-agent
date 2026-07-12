@@ -81,6 +81,20 @@ class RecordManager:
                 result.append(record_dict)
             return result
 
+    def get_all_records(self):
+        """获取所有记录"""
+        with get_cursor() as cursor:
+            cursor.execute('SELECT * FROM records ORDER BY id')
+            records = cursor.fetchall()
+
+            result = []
+            for record in records:
+                record_dict = dict(record)
+                cursor.execute('SELECT field_key, field_value FROM record_values WHERE record_id = ?', (record['id'],))
+                record_dict['values'] = {row['field_key']: row['field_value'] for row in cursor.fetchall()}
+                result.append(record_dict)
+            return result
+
     def get_record_names_by_batch(self, batch_id):
         """获取批次下所有记录名称"""
         with get_cursor() as cursor:
