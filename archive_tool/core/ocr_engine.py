@@ -102,32 +102,30 @@ class OCREngine:
                 log_ocr(f"[OCR] 识别模型: {rec_dir} -> {'存在' if os.path.exists(rec_dir) else '缺失'}")
                 log_ocr(f"[OCR] 方向模型: {cls_dir} -> {'存在' if os.path.exists(cls_dir) else '缺失'}")
 
-            # PaddleOCR 参数在不同版本间存在差异（比如不再接受 show_log）
-            # 先尝试带 show_log 参数实例化，若抛出 Unknown argument 则重试不传该参数
+            params = {
+                'use_angle_cls': True,
+                'lang': 'ch',
+            }
+            
+            if det_dir and os.path.exists(det_dir):
+                params['det_model_dir'] = det_dir
+            if rec_dir and os.path.exists(rec_dir):
+                params['rec_model_dir'] = rec_dir
+            if cls_dir and os.path.exists(cls_dir):
+                params['cls_model_dir'] = cls_dir
+            
             try:
-                self._ocr = PaddleOCR(
-                    use_angle_cls=True,
-                    lang="ch",
-                    use_gpu=use_gpu,
-                    show_log=False,
-                    det_model_dir=det_dir,
-                    rec_model_dir=rec_dir,
-                    cls_model_dir=cls_dir,
-                )
+                self._ocr = PaddleOCR(**params)
             except (TypeError, ValueError) as inst_e:
-                # 某些 paddleocr 版本会报 ValueError: Unknown argument: show_log
                 try:
-                    self._ocr = PaddleOCR(
-                        use_angle_cls=True,
-                        lang="ch",
-                        use_gpu=use_gpu,
-                        det_model_dir=det_dir,
-                        rec_model_dir=rec_dir,
-                        cls_model_dir=cls_dir,
-                    )
+                    for key in ['use_gpu', 'show_log']:
+                        params.pop(key, None)
+                    self._ocr = PaddleOCR(**params)
                 except Exception:
-                    # 如果仍然失败，继续抛出原始异常以便记录完整 Traceback
-                    raise inst_e
+                    try:
+                        self._ocr = PaddleOCR(lang='ch', use_angle_cls=True)
+                    except Exception:
+                        raise inst_e
             log_ocr("[OCR] PaddleOCR 初始化成功 ✓")
 
         except Exception as e:

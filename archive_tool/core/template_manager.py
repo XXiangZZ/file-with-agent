@@ -19,7 +19,7 @@ class TemplateManager:
         for json_file in TEMPLATE_DIR.glob('*.json'):
             with open(json_file, 'r', encoding='utf-8') as f:
                 template_data = json.load(f)
-                template_name = json_file.stem
+                template_name = template_data.get('name', json_file.stem)
                 self.templates[template_name] = template_data
 
     def get_template(self, name):
@@ -146,6 +146,13 @@ class TemplateManager:
             cursor.execute('SELECT name FROM templates WHERE id = ?', (template_id,))
             result = cursor.fetchone()
             return result['name'] if result else None
+
+    def get_template_by_id(self, template_id):
+        """根据模板ID获取模板配置（包含字段）"""
+        template_name = self.get_template_name(template_id)
+        if not template_name:
+            return None
+        return self.get_template(template_name)
 
     def get_templates_with_id(self):
         """获取所有模板列表（包含ID）"""

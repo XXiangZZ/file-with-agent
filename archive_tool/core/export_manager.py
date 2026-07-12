@@ -4,7 +4,10 @@ Excel导出管理
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
 from datetime import datetime
+from PySide6.QtWidgets import QFileDialog
 from config.settings import EXPORT_HEADER_FILL, EXPORT_HEADER_FONT_COLOR
+from core.record_manager import RecordManager
+from core.template_manager import TemplateManager
 
 
 class ExportManager:
@@ -13,6 +16,43 @@ class ExportManager:
     HEADER_FILL = PatternFill('solid', fgColor=EXPORT_HEADER_FILL)
     HEADER_FONT = Font(bold=True, color=EXPORT_HEADER_FONT_COLOR, name='Arial')
     ALT_FILL = PatternFill('solid', fgColor='F2F2F2')
+
+    def __init__(self):
+        self.record_manager = RecordManager()
+        self.template_manager = TemplateManager()
+
+    def export_records(self, record_ids, filing_type):
+        """导出记录到Excel"""
+        records = []
+        for record_id in record_ids:
+            record = self.record_manager.get_record(record_id)
+            if record:
+                records.append(record)
+        
+        if not records:
+            return
+
+        template_id = records[0].get('template_id')
+        template = self.template_manager.get_template_by_id(template_id)
+        field_defs = template.get('fields', []) if template else []
+
+        filename, _ = QFileDialog.getSaveFileName(
+            None, "导出Excel", f"records_{datetime.now().strftime('%Y%m%d')}",
+            "Excel文件 (*.xlsx)"
+        )
+        
+        if not filename:
+            return
+
+        if not filename.endswith('.xlsx'):
+            filename += '.xlsx'
+
+        output_path = filename.replace('.xlsx', '')
+
+        if filing_type == 'volume':
+            self.export_volume_filing({'project': records}, output_path)
+        else:
+            self.export_item_filing(records, field_defs, output_path)
 
     def export_item_filing(self, records, field_defs, output_path):
         """以件归档导出：标准字段+自定义字段合并一张Sheet"""

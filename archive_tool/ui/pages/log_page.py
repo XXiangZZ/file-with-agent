@@ -58,30 +58,21 @@ class LogPage(QWidget):
 
         self.type_combo = QComboBox()
         self.type_combo.addItem('全部', '')
-        self.type_combo.addItems([
-            'startup',
-            'exit',
-            'save_record',
-            'update_record',
-            'delete_record',
-            'save_draft',
-            'load_draft',
-            'delete_draft',
-            'import_excel',
-            'export_excel',
-            'validate',
-            'create_batch',
-            'delete_batch',
-            'rename_batch',
-            'import_records',
-            'select_batch',
-            'select_year',
-            'select_record',
-            'advanced_search',
-            'mark_reviewed',
-            'mark_reviewed_batch',
-            'export_search',
-        ])
+        self.type_combo.addItem('保存记录', 'save_record')
+        self.type_combo.addItem('更新记录', 'update_record')
+        self.type_combo.addItem('删除记录', 'delete_record')
+        self.type_combo.addItem('保存草稿', 'save_draft')
+        self.type_combo.addItem('删除草稿', 'delete_draft')
+        self.type_combo.addItem('Excel导入', 'import_excel')
+        self.type_combo.addItem('Excel导出', 'export_excel')
+        self.type_combo.addItem('数据校验', 'validate')
+        self.type_combo.addItem('创建批次', 'create_batch')
+        self.type_combo.addItem('删除批次', 'delete_batch')
+        self.type_combo.addItem('重命名批次', 'rename_batch')
+        self.type_combo.addItem('批量导入记录', 'import_records')
+        self.type_combo.addItem('标记已核对', 'mark_reviewed')
+        self.type_combo.addItem('批量标记核对', 'mark_reviewed_batch')
+        self.type_combo.addItem('导出检索结果', 'export_search')
         self.type_combo.setStyleSheet("""
             QComboBox {
                 border: 1px solid #D1D5DB;
@@ -353,13 +344,10 @@ class LogPage(QWidget):
 
     def _format_type(self, operation_type):
         mappings = {
-            'startup': '系统启动',
-            'exit': '系统退出',
             'save_record': '保存记录',
             'update_record': '更新记录',
             'delete_record': '删除记录',
             'save_draft': '保存草稿',
-            'load_draft': '加载草稿',
             'delete_draft': '删除草稿',
             'import_excel': 'Excel导入',
             'export_excel': 'Excel导出',
@@ -368,10 +356,6 @@ class LogPage(QWidget):
             'delete_batch': '删除批次',
             'rename_batch': '重命名批次',
             'import_records': '批量导入记录',
-            'select_batch': '选择批次',
-            'select_year': '选择年度',
-            'select_record': '选择记录',
-            'advanced_search': '高级检索',
             'mark_reviewed': '标记已核对',
             'mark_reviewed_batch': '批量标记核对',
             'export_search': '导出检索结果',
@@ -388,13 +372,10 @@ class LogPage(QWidget):
             return '无详细信息'
 
         formatters = {
-            'startup': lambda d: f"版本: {d.get('version', '未知')}",
-            'exit': lambda d: f"退出原因: {d.get('reason', '正常退出')}",
-            'save_record': lambda d: f"记录ID: {d.get('record_id', '未知')}",
+            'save_record': lambda d: f"记录名称: {d.get('record_name', '未知')} (ID: {d.get('record_id', '未知')}), 模板: {d.get('template_name', '未知')}",
             'update_record': lambda d: f"记录ID: {d.get('record_id', '未知')}",
             'delete_record': lambda d: f"记录ID: {d.get('record_id', '未知')}",
             'save_draft': lambda d: f"草稿名称: {d.get('draft_name', '未知')}",
-            'load_draft': lambda d: f"草稿ID: {d.get('draft_id', '未知')}",
             'delete_draft': lambda d: f"草稿名称: {d.get('draft_name', '未知')} (ID: {d.get('draft_id', '未知')})",
             'import_excel': lambda d: (
                 f"成功: {d.get('success_count', 0)}条, 失败: {d.get('fail_count', 0)}条"
@@ -408,10 +389,6 @@ class LogPage(QWidget):
             'rename_batch': lambda d: f"批次ID: {d.get('batch_id', '未知')}, "
                                       f"原名称: {d.get('old_name', '未知')} → 新名称: {d.get('new_name', '未知')}",
             'import_records': lambda d: f"成功: {d.get('success_count', 0)}条, 失败: {d.get('fail_count', 0)}条",
-            'select_batch': lambda d: f"批次ID: {d.get('batch_id', '未知')}",
-            'select_year': lambda d: f"批次ID: {d.get('batch_id', '未知')}, 模板: {d.get('template', '未知')}, 年度: {d.get('year', '未知')}",
-            'select_record': lambda d: f"记录ID: {d.get('record_id', '未知')}",
-            'advanced_search': lambda d: f"检索条件: {len(d.get('conditions', []))}个, 结果: {d.get('count', 0)}条",
             'mark_reviewed': lambda d: f"记录ID: {d.get('record_id', '未知')}",
             'mark_reviewed_batch': lambda d: f"标记记录数: {len(d.get('record_ids', []))}条",
             'export_search': lambda d: f"导出记录数: {d.get('count', 0)}条, 文件: {d.get('path', '未知')}",

@@ -298,7 +298,6 @@ class DraftPage(QWidget):
         if draft:
             self._highlight_row(row)
             self.draft_load_requested.emit(draft)
-            self.logger.log('load_draft', {'draft_id': draft_id})
 
     def _on_delete_draft(self):
         """删除草稿"""

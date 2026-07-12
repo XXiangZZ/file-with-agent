@@ -897,13 +897,15 @@ class EntryPage(QWidget):
                 if view and view.window():
                     view.window().setAttribute(Qt.WA_TranslucentBackground, True)
             elif field_type == "date":
-                w = DatePickerWidget()
+                w = QLineEdit()
+                w.setPlaceholderText("yyyyMMdd")
+                w.setMaxLength(8)
                 w.installEventFilter(self)
-                self.date_widgets.append(w)
             elif field_type == "datetime":
-                w = DateTimePickerWidget()
+                w = QLineEdit()
+                w.setPlaceholderText("yyyyMMdd")
+                w.setMaxLength(8)
                 w.installEventFilter(self)
-                self.date_widgets.append(w)
             elif field_type == "number":
                 w = QLineEdit()
                 w.setInputMask("9999999999")
@@ -920,6 +922,9 @@ class EntryPage(QWidget):
             w.setObjectName(field_key)
             if hint:
                 w.setToolTip(hint)
+            if isinstance(w, (QLineEdit, QComboBox)):
+                w.setMinimumWidth(300)
+                w.setMaximumWidth(500)
 
             field_container = QWidget()
             field_layout = QVBoxLayout(field_container)
@@ -1215,12 +1220,15 @@ class EntryPage(QWidget):
         """从记录数据填充表单"""
         for field in self.current_fields:
             fk = field["key"]
+            field_type = field.get("type", "text")
             val = values.get(fk, "")
             if not val:
                 continue
 
             w = self.form_widget.findChild(QLineEdit, fk)
             if w:
+                if field_type == "datetime" and len(val) > 8:
+                    val = val[:8]
                 w.setText(val)
                 continue
             w = self.form_widget.findChild(QComboBox, fk)
@@ -1232,14 +1240,7 @@ class EntryPage(QWidget):
             if w:
                 w.setText(val)
                 continue
-            w = self.form_widget.findChild(DatePickerWidget, fk)
-            if w and val:
-                w.setDate(QDate.fromString(val, "yyyyMMdd"))
-                continue
-            w = self.form_widget.findChild(DateTimePickerWidget, fk)
-            if w and val:
-                w.setDateTime(QDateTime.fromString(val, "yyyyMMddHHmmss"))
-                continue
+
 
     def _on_save_record(self):
         if not self.current_batch_id:
@@ -1293,7 +1294,11 @@ class EntryPage(QWidget):
 
             self.archive_tree.refresh()
             self.save_auto_cache()
-            self.logger.log("save_record", {"record_id": self.current_record_id})
+            self.logger.log("save_record", {
+                "record_id": self.current_record_id,
+                "record_name": record_name,
+                "template_name": self.current_template
+            })
         except Exception as e:
             QMessageBox.critical(self, "错误", f"保存失败: {e}")
 
@@ -1313,16 +1318,7 @@ class EntryPage(QWidget):
             if w:
                 data[fk] = w.toPlainText().strip()
                 continue
-            w = self.form_widget.findChild(DatePickerWidget, fk, Qt.FindChildrenRecursively)
-            if w:
-                d = w.date()
-                data[fk] = d.toString("yyyyMMdd") if d else ""
-                continue
-            w = self.form_widget.findChild(DateTimePickerWidget, fk, Qt.FindChildrenRecursively)
-            if w:
-                dt = w.dateTime()
-                data[fk] = dt.toString("yyyyMMddHHmmss") if dt else ""
-                continue
+
         return data
 
     def _extract_year_from_data(self, data):
@@ -1362,16 +1358,7 @@ class EntryPage(QWidget):
             if w:
                 w.setText(val)
                 continue
-            w = self.form_widget.findChild(DatePickerWidget, fk, Qt.FindChildrenRecursively)
-            if w:
-                if val:
-                    w.setDate(QDate.fromString(val, "yyyyMMdd"))
-                continue
-            w = self.form_widget.findChild(DateTimePickerWidget, fk, Qt.FindChildrenRecursively)
-            if w:
-                if val:
-                    w.setDateTime(QDateTime.fromString(val, "yyyyMMddHHmmss"))
-                continue
+
 
     def _validate_by_layer(self, data, layer):
         layer_fields = [f for f in self.current_fields if f.get('layer') == layer]
@@ -1770,8 +1757,6 @@ class EntryPage(QWidget):
             self.current_record_id = None
             self.is_new_record = True
             self._clear_form()
-
-            self.logger.log("select_batch", {"batch_id": batch_id})
         except Exception:
             pass
 
@@ -1794,8 +1779,6 @@ class EntryPage(QWidget):
             self.current_record_id = None
             self.is_new_record = True
             self._clear_form()
-
-            self.logger.log("select_year", {"batch_id": batch_id, "template": template_name, "year": year})
         except Exception:
             pass
 
@@ -1823,7 +1806,6 @@ class EntryPage(QWidget):
                 from PySide6.QtCore import QTimer
                 QTimer.singleShot(50, lambda: self._load_record_to_form(record))
 
-                self.logger.log("select_record", {"record_id": record_id})
         except Exception:
             pass
 
