@@ -331,8 +331,9 @@ class EntryPage(QWidget):
         self.form_groups = {}
         self.combo_boxes = []
         self.date_widgets = []
-        self._templates_need_filing_choice = ["diangw", "caigou"]
-        
+        self._templates_need_filing_choice = set()  # template names that support volume
+        self._template_filing_types = {}  # name -> filing_type mapping
+
         # OCR状态管理
         self.active_field = None              # 当前获得焦点的字段
         self.ocr_target_field = None          # OCR结果写入目标
@@ -377,10 +378,10 @@ class EntryPage(QWidget):
         self.splitter.addWidget(self.form_panel)
         self.splitter.addWidget(self.right_panel)
 
-        # 设置初始宽度比例：预览35%、表单40%、目录25%
-        self.splitter.setStretchFactor(0, 50)
-        self.splitter.setStretchFactor(1, 25)
-        self.splitter.setStretchFactor(2, 25)
+        # 设置初始宽度比例：预览38%、表单32%、目录30%
+        self.splitter.setStretchFactor(0, 38)
+        self.splitter.setStretchFactor(1, 32)
+        self.splitter.setStretchFactor(2, 30)
 
         main_layout.addWidget(self.splitter, stretch=1)
 
@@ -479,14 +480,14 @@ class EntryPage(QWidget):
         """根据可用宽度动态计算splitter各部分尺寸"""
         available = self.width() - 20  # 减去边距
         if available > 0:
-            left_width = int(available * 0.40)   # 原来0.38，缩小扫描件
-            right_width = int(available * 0.25)  # 目录保持
-            mid_width = available - left_width - right_width  # 中间自动变大
-            
+            left_width = int(available * 0.42)   # 扫描件占38%
+            right_width = int(available * 0.28)  # 目录占28%
+            mid_width = available - left_width - right_width  # 表单占34%
+
             left_width = max(self.left_panel.minimumWidth(), min(left_width, self.left_panel.maximumWidth()))
             right_width = max(self.right_panel.minimumWidth(), min(right_width, self.right_panel.maximumWidth()))
             mid_width = max(self.form_panel.minimumWidth(), mid_width)
-            
+
             self.splitter.setSizes([left_width, mid_width, right_width])
 
     def _create_right_panel(self):
@@ -620,7 +621,7 @@ class EntryPage(QWidget):
         """顶部工具栏 - 两行布局"""
         toolbar = QWidget()
         toolbar.setObjectName("toolbar")
-        toolbar.setFixedHeight(86)
+        toolbar.setFixedHeight(96)
         
         main_layout = QVBoxLayout(toolbar)
         main_layout.setContentsMargins(12, 6, 12, 6)
@@ -640,7 +641,7 @@ class EntryPage(QWidget):
         self.template_combo = QComboBox()
         self.template_combo.setView(QListView())
         self.template_combo.setObjectName("templateCombo")
-        self.template_combo.setFixedSize(106, 28)
+        self.template_combo.setFixedSize(150, 28)
         self.template_combo.currentTextChanged.connect(self._on_template_changed)
         row1_layout.addWidget(self.template_combo)
 
@@ -651,7 +652,6 @@ class EntryPage(QWidget):
         self.filing_type_combo.setObjectName("filingTypeCombo")
         self.filing_type_combo.setFixedSize(100, 28)
         self.filing_type_combo.addItems(["以件归档", "以卷归档"])
-        self.filing_type_combo.currentTextChanged.connect(self._on_filing_type_changed)
         self.filing_type_combo.setEnabled(False)
         row1_layout.addWidget(self.filing_type_combo)
 
@@ -792,11 +792,15 @@ class EntryPage(QWidget):
     def _init_template_combo(self):
         templates = self.template_manager.get_all_templates()
         for template in templates:
+            filing_type = template.get('filing_type', 'item')
             self.template_combo.addItem(template['name'], template['filename'])
-        
+            self._template_filing_types[template['name']] = filing_type
+            if filing_type == 'volume':
+                self._templates_need_filing_choice.add(template['name'])
+
         if templates:
             self._on_template_changed(templates[0]['name'])
-        
+
         self._load_batches()
 
     def _load_batches(self):
@@ -828,17 +832,18 @@ class EntryPage(QWidget):
 
     def _load_template_fields(self, template_filename):
         self.current_fields = self.template_manager.get_fields(template_filename)
+        self._update_filing_type()  # must set filing_type BEFORE _build_form
         self._build_form()
         self._clear_form()
-        self._update_filing_type()
 
     def _update_filing_type(self):
-        filename = self.template_manager.get_filename_by_name(self.current_template)
-        if filename in self._templates_need_filing_choice:
-            self.filing_type_combo.setEnabled(True)
+        template_filing_type = self._template_filing_types.get(self.current_template, 'item')
+
+        if template_filing_type == 'volume':
+            self.filing_type_combo.setCurrentIndex(1)  # "以卷归档"
+            self.current_filing_type = 'volume'
         else:
-            self.filing_type_combo.setEnabled(False)
-            self.filing_type_combo.setCurrentIndex(0)
+            self.filing_type_combo.setCurrentIndex(0)  # "以件归档"
             self.current_filing_type = 'item'
 
     def _build_form(self):
@@ -893,9 +898,6 @@ class EntryPage(QWidget):
                 w.addItems(options)
                 w.installEventFilter(self)
                 self.combo_boxes.append(w)
-                view = w.view()
-                if view and view.window():
-                    view.window().setAttribute(Qt.WA_TranslucentBackground, True)
             elif field_type == "date":
                 w = QLineEdit()
                 w.setPlaceholderText("yyyyMMdd")
@@ -923,8 +925,8 @@ class EntryPage(QWidget):
             if hint:
                 w.setToolTip(hint)
             if isinstance(w, (QLineEdit, QComboBox)):
-                w.setMinimumWidth(300)
-                w.setMaximumWidth(500)
+                w.setMinimumWidth(240)
+                w.setMaximumWidth(440)
 
             field_container = QWidget()
             field_layout = QVBoxLayout(field_container)
@@ -1081,30 +1083,6 @@ class EntryPage(QWidget):
                 w.clear()
             elif isinstance(w, QDateTimeEdit):
                 w.clear()
-
-    def _on_filing_type_changed(self, filing_type_text):
-        old_type = self.current_filing_type
-        new_type = 'volume' if filing_type_text == '以卷归档' else 'item'
-        
-        if old_type != new_type:
-            if old_type == 'item' and new_type == 'volume':
-                reply = QMessageBox.warning(self, "提示", 
-                    "切换到以卷归档需要补充项目层和案卷层信息，是否继续？",
-                    QMessageBox.Yes | QMessageBox.No)
-                if reply != QMessageBox.Yes:
-                    self.filing_type_combo.setCurrentIndex(0 if old_type == 'item' else 1)
-                    return
-            elif old_type == 'volume' and new_type == 'item':
-                reply = QMessageBox.warning(self, "提示",
-                    "切换到以件归档后，项目层和案卷层数据将不随档案上传，是否继续？",
-                    QMessageBox.Yes | QMessageBox.No)
-                if reply != QMessageBox.Yes:
-                    self.filing_type_combo.setCurrentIndex(0 if old_type == 'item' else 1)
-                    return
-            
-            self.current_filing_type = new_type
-            self._build_form()
-            self._clear_form()
 
     def _on_new_record(self):
         self.current_record_id = None
@@ -1932,13 +1910,6 @@ class EntryPage(QWidget):
                         obj.setToolTip(text)
                     else:
                         obj.setToolTip("")
-        elif event.type() == QEvent.Type.Show:
-            if isinstance(obj, QAbstractItemView):
-                win = obj.window()
-                win.setWindowFlags(
-                    Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint
-                )
-                win.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         return super().eventFilter(obj, event)
 
     # ──────────────────────────────── OCR 识别相关方法 ──────────────────────

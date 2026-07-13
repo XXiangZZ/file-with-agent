@@ -1,0 +1,756 @@
+{
+    "name": "电网建设-卷",
+    "description": "电网建设档案模板（以卷归档）",
+    "filing_type": "volume",
+    "fields": [
+        {
+            "key": "xm_project_name",
+            "name": "项目名称",
+            "required": true,
+            "type": "text",
+            "layer": "project"
+        },
+        {
+            "key": "xm_project_code",
+            "name": "项目代号",
+            "required": true,
+            "type": "text",
+            "layer": "project"
+        },
+        {
+            "key": "xm_project_type",
+            "name": "项目类型",
+            "required": true,
+            "type": "text",
+            "layer": "project"
+        },
+        {
+            "key": "xm_voltage_level",
+            "name": "电压等级",
+            "required": true,
+            "type": "text",
+            "layer": "project"
+        },
+        {
+            "key": "xm_construction_unit",
+            "name": "建设单位",
+            "required": false,
+            "type": "text",
+            "layer": "project"
+        },
+        {
+            "key": "xm_design_unit",
+            "name": "设计单位",
+            "required": false,
+            "type": "text",
+            "layer": "project"
+        },
+        {
+            "key": "xm_construction_company",
+            "name": "施工单位",
+            "required": false,
+            "type": "text",
+            "layer": "project"
+        },
+        {
+            "key": "xm_supervision_unit",
+            "name": "监理单位",
+            "required": false,
+            "type": "text",
+            "layer": "project"
+        },
+        {
+            "key": "xm_project_code_num",
+            "name": "项目编码",
+            "required": false,
+            "type": "text",
+            "layer": "project"
+        },
+        {
+            "key": "xm_approved_name",
+            "name": "核准名称",
+            "required": true,
+            "type": "text",
+            "layer": "project"
+        },
+        {
+            "key": "xm_start_date",
+            "name": "开工日期",
+            "required": false,
+            "type": "date",
+            "layer": "project"
+        },
+        {
+            "key": "xm_completion_date",
+            "name": "竣工日期",
+            "required": false,
+            "type": "date",
+            "layer": "project"
+        },
+        {
+            "key": "xm_dispatch_number",
+            "name": "调度号",
+            "required": false,
+            "type": "text",
+            "layer": "project"
+        },
+        {
+            "key": "xm_engineering_dispatch_name",
+            "name": "工程调度名",
+            "required": false,
+            "type": "text",
+            "layer": "project"
+        },
+        {
+            "key": "xm_approval_year",
+            "name": "立项年度",
+            "required": true,
+            "type": "text",
+            "layer": "project"
+        },
+        {
+            "key": "xm_serial_number",
+            "name": "流水号",
+            "required": false,
+            "type": "text",
+            "layer": "project"
+        },
+        {
+            "key": "xm_fonds_number",
+            "name": "全宗号",
+            "required": false,
+            "type": "text",
+            "layer": "project"
+        },
+        {
+            "key": "xm_approval_date",
+            "name": "核准日期",
+            "required": false,
+            "type": "date",
+            "layer": "project"
+        },
+        {
+            "key": "xm_completion_year",
+            "name": "竣工年度",
+            "required": false,
+            "type": "text",
+            "layer": "project"
+        },
+        {
+            "key": "xm_total_investment",
+            "name": "项目总投资",
+            "required": false,
+            "type": "number",
+            "layer": "project"
+        },
+        {
+            "key": "xm_info_detail",
+            "name": "信息详细",
+            "required": false,
+            "type": "textarea",
+            "layer": "project"
+        },
+        {
+            "key": "xm_fonds_name",
+            "name": "全宗名称",
+            "required": false,
+            "type": "text",
+            "layer": "project"
+        },
+        {
+            "key": "aj_case_number",
+            "name": "案卷号",
+            "required": false,
+            "type": "text",
+            "layer": "case"
+        },
+        {
+            "key": "aj_archive_code",
+            "name": "案卷档号",
+            "required": false,
+            "type": "text",
+            "layer": "case"
+        },
+        {
+            "key": "aj_title",
+            "name": "案卷题名",
+            "required": true,
+            "type": "text",
+            "layer": "case"
+        },
+        {
+            "key": "aj_category_number",
+            "name": "分类号",
+            "required": true,
+            "type": "text",
+            "layer": "case"
+        },
+        {
+            "key": "aj_category_name",
+            "name": "类目名称",
+            "required": true,
+            "type": "text",
+            "layer": "case"
+        },
+        {
+            "key": "aj_bid_section_number",
+            "name": "标段号",
+            "required": false,
+            "type": "text",
+            "layer": "case"
+        },
+        {
+            "key": "aj_retention_period",
+            "name": "保管期限",
+            "required": true,
+            "type": "text",
+            "layer": "case",
+            "dropdown_options": [
+                "永久",
+                "30年",
+                "10年",
+                "长期",
+                "短期"
+            ]
+        },
+        {
+            "key": "aj_department",
+            "name": "所属部门",
+            "required": false,
+            "type": "text",
+            "layer": "case"
+        },
+        {
+            "key": "aj_total_pages",
+            "name": "总页数",
+            "required": false,
+            "type": "number",
+            "layer": "case"
+        },
+        {
+            "key": "aj_text_pages",
+            "name": "文字页数",
+            "required": false,
+            "type": "number",
+            "layer": "case"
+        },
+        {
+            "key": "aj_drawing_count",
+            "name": "图纸张数",
+            "required": false,
+            "type": "number",
+            "layer": "case"
+        },
+        {
+            "key": "aj_project_code",
+            "name": "项目代号",
+            "required": false,
+            "type": "text",
+            "layer": "case"
+        },
+        {
+            "key": "aj_identification_status",
+            "name": "标识状态",
+            "required": false,
+            "type": "text",
+            "layer": "case"
+        },
+        {
+            "key": "aj_organization_status",
+            "name": "案卷整理状态",
+            "required": false,
+            "type": "text",
+            "layer": "case"
+        },
+        {
+            "key": "aj_item_count",
+            "name": "件数",
+            "required": false,
+            "type": "number",
+            "layer": "case"
+        },
+        {
+            "key": "aj_project_name",
+            "name": "项目名称",
+            "required": false,
+            "type": "text",
+            "layer": "case"
+        },
+        {
+            "key": "aj_start_date",
+            "name": "起始日期",
+            "required": false,
+            "type": "date",
+            "layer": "case"
+        },
+        {
+            "key": "aj_end_date",
+            "name": "截止日期",
+            "required": false,
+            "type": "date",
+            "layer": "case"
+        },
+        {
+            "key": "aj_serial_number",
+            "name": "流水号",
+            "required": false,
+            "type": "text",
+            "layer": "case"
+        },
+        {
+            "key": "aj_project_id",
+            "name": "所属项目id",
+            "required": false,
+            "type": "text",
+            "layer": "case"
+        },
+        {
+            "key": "aj_fonds_name",
+            "name": "全宗名称",
+            "required": false,
+            "type": "text",
+            "layer": "case"
+        },
+        {
+            "key": "aj_custody_unit",
+            "name": "保管单位",
+            "required": false,
+            "type": "text",
+            "layer": "case"
+        },
+        {
+            "key": "aj_filing_unit",
+            "name": "立卷单位",
+            "required": false,
+            "type": "text",
+            "layer": "case"
+        },
+        {
+            "key": "aj_inspector",
+            "name": "检查人",
+            "required": true,
+            "type": "text",
+            "layer": "case"
+        },
+        {
+            "key": "aj_filer",
+            "name": "立卷人",
+            "required": true,
+            "type": "text",
+            "layer": "case"
+        },
+        {
+            "key": "aj_inspection_date",
+            "name": "检查日期",
+            "required": true,
+            "type": "date",
+            "layer": "case"
+        },
+        {
+            "key": "aj_filing_date",
+            "name": "立卷日期",
+            "required": true,
+            "type": "date",
+            "layer": "case"
+        },
+        {
+            "key": "aj_archivist",
+            "name": "归档人",
+            "required": false,
+            "type": "text",
+            "layer": "case"
+        },
+        {
+            "key": "aj_archive_date",
+            "name": "归档日期",
+            "required": false,
+            "type": "date",
+            "layer": "case"
+        },
+        {
+            "key": "aj_archive_copies",
+            "name": "归档份数",
+            "required": false,
+            "type": "number",
+            "layer": "case"
+        },
+        {
+            "key": "aj_spine_width",
+            "name": "脊背宽度",
+            "required": true,
+            "type": "text",
+            "layer": "case"
+        },
+        {
+            "key": "aj_location_number",
+            "name": "库位号",
+            "required": false,
+            "type": "text",
+            "layer": "case"
+        },
+        {
+            "key": "aj_notes_explanatory",
+            "name": "备考说明",
+            "required": false,
+            "type": "textarea",
+            "layer": "case"
+        },
+        {
+            "key": "aj_cross_reference",
+            "name": "互见号",
+            "required": false,
+            "type": "text",
+            "layer": "case"
+        },
+        {
+            "key": "aj_remarks",
+            "name": "备注",
+            "required": false,
+            "type": "textarea",
+            "layer": "case"
+        },
+        {
+            "key": "aj_parent_identifier",
+            "name": "父标识（导入专用）",
+            "required": false,
+            "type": "text",
+            "layer": "case"
+        },
+        {
+            "key": "aj_identifier",
+            "name": "标识（导入专用）",
+            "required": false,
+            "type": "text",
+            "layer": "case"
+        },
+        {
+            "key": "aj_fonds_number",
+            "name": "全宗号",
+            "required": false,
+            "type": "text",
+            "layer": "case"
+        },
+        {
+            "key": "aj_security_level",
+            "name": "密级",
+            "required": false,
+            "type": "text",
+            "layer": "case"
+        },
+        {
+            "key": "aj_retention_status",
+            "name": "期限状态",
+            "required": false,
+            "type": "text",
+            "layer": "case"
+        },
+        {
+            "key": "aj_media_type",
+            "name": "载体类型",
+            "required": false,
+            "type": "text",
+            "layer": "case"
+        },
+        {
+            "key": "aj_year",
+            "name": "年度",
+            "required": false,
+            "type": "text",
+            "layer": "case"
+        },
+        {
+            "key": "wj_volume_sequence",
+            "name": "卷内序号",
+            "required": false,
+            "type": "text",
+            "layer": "file"
+        },
+        {
+            "key": "wj_archive_code",
+            "name": "文件档号",
+            "required": false,
+            "type": "text",
+            "layer": "file"
+        },
+        {
+            "key": "wj_title",
+            "name": "文件题名",
+            "required": true,
+            "type": "text",
+            "layer": "file"
+        },
+        {
+            "key": "wj_category_number",
+            "name": "分类号",
+            "required": true,
+            "type": "text",
+            "layer": "file"
+        },
+        {
+            "key": "wj_category_name",
+            "name": "类目名称",
+            "required": true,
+            "type": "text",
+            "layer": "file"
+        },
+        {
+            "key": "wj_bid_section_number",
+            "name": "标段号",
+            "required": false,
+            "type": "text",
+            "layer": "file"
+        },
+        {
+            "key": "wj_responsible_person",
+            "name": "责任者",
+            "required": true,
+            "type": "text",
+            "layer": "file"
+        },
+        {
+            "key": "wj_file_date",
+            "name": "文件日期",
+            "required": true,
+            "type": "date",
+            "layer": "file"
+        },
+        {
+            "key": "wj_fonds_number",
+            "name": "全宗号",
+            "required": false,
+            "type": "text",
+            "layer": "file"
+        },
+        {
+            "key": "wj_text_pages",
+            "name": "文字页数",
+            "required": false,
+            "type": "number",
+            "layer": "file"
+        },
+        {
+            "key": "wj_case_code",
+            "name": "案卷档号",
+            "required": false,
+            "type": "text",
+            "layer": "file"
+        },
+        {
+            "key": "wj_project_code",
+            "name": "项目代号",
+            "required": false,
+            "type": "text",
+            "layer": "file"
+        },
+        {
+            "key": "wj_year",
+            "name": "年度",
+            "required": false,
+            "type": "text",
+            "layer": "file"
+        },
+        {
+            "key": "wj_fonds_name",
+            "name": "全宗名称",
+            "required": false,
+            "type": "text",
+            "layer": "file"
+        },
+        {
+            "key": "wj_project_name",
+            "name": "项目名称",
+            "required": false,
+            "type": "text",
+            "layer": "file"
+        },
+        {
+            "key": "wj_security_level",
+            "name": "密级",
+            "required": false,
+            "type": "text",
+            "layer": "file"
+        },
+        {
+            "key": "wj_organization_status",
+            "name": "整理状态",
+            "required": false,
+            "type": "text",
+            "layer": "file"
+        },
+        {
+            "key": "wj_department",
+            "name": "所属部门",
+            "required": false,
+            "type": "text",
+            "layer": "file"
+        },
+        {
+            "key": "wj_drawing_document_number",
+            "name": "图号文号",
+            "required": false,
+            "type": "text",
+            "layer": "file"
+        },
+        {
+            "key": "wj_case_id",
+            "name": "所属案卷id",
+            "required": false,
+            "type": "text",
+            "layer": "file"
+        },
+        {
+            "key": "wj_project_id",
+            "name": "所属项目id",
+            "required": false,
+            "type": "text",
+            "layer": "file"
+        },
+        {
+            "key": "wj_serial_number",
+            "name": "流水号",
+            "required": false,
+            "type": "text",
+            "layer": "file"
+        },
+        {
+            "key": "wj_case_number",
+            "name": "案卷号",
+            "required": false,
+            "type": "text",
+            "layer": "file"
+        },
+        {
+            "key": "wj_media_type",
+            "name": "载体类型",
+            "required": false,
+            "type": "text",
+            "layer": "file"
+        },
+        {
+            "key": "wj_retention_period",
+            "name": "保管期限",
+            "required": true,
+            "type": "text",
+            "layer": "file",
+            "dropdown_options": [
+                "永久",
+                "30年",
+                "10年",
+                "长期",
+                "短期"
+            ]
+        },
+        {
+            "key": "wj_page_number",
+            "name": "页号",
+            "required": false,
+            "type": "text",
+            "layer": "file"
+        },
+        {
+            "key": "wj_drawing_count",
+            "name": "图纸张数",
+            "required": false,
+            "type": "number",
+            "layer": "file"
+        },
+        {
+            "key": "wj_archivist",
+            "name": "归档人",
+            "required": false,
+            "type": "text",
+            "layer": "file"
+        },
+        {
+            "key": "wj_archive_time",
+            "name": "归档时间",
+            "required": false,
+            "type": "datetime",
+            "layer": "file"
+        },
+        {
+            "key": "wj_archive_copies",
+            "name": "归档份数",
+            "required": false,
+            "type": "number",
+            "layer": "file"
+        },
+        {
+            "key": "wj_adjusted_retention_period",
+            "name": "调整后保管期限",
+            "required": false,
+            "type": "text",
+            "layer": "file"
+        },
+        {
+            "key": "wj_electronic_file_count",
+            "name": "电子文件数",
+            "required": false,
+            "type": "number",
+            "layer": "file"
+        },
+        {
+            "key": "wj_location_number",
+            "name": "库位号",
+            "required": false,
+            "type": "text",
+            "layer": "file"
+        },
+        {
+            "key": "wj_data_source",
+            "name": "数据来源",
+            "required": false,
+            "type": "text",
+            "layer": "file"
+        },
+        {
+            "key": "wj_cross_reference",
+            "name": "互见号",
+            "required": false,
+            "type": "text",
+            "layer": "file"
+        },
+        {
+            "key": "wj_creation_time",
+            "name": "创建时间",
+            "required": false,
+            "type": "datetime",
+            "layer": "file"
+        },
+        {
+            "key": "wj_data_check_result",
+            "name": "数据检测结果",
+            "required": false,
+            "type": "text",
+            "layer": "file"
+        },
+        {
+            "key": "wj_remarks",
+            "name": "备注",
+            "required": false,
+            "type": "textarea",
+            "layer": "file"
+        },
+        {
+            "key": "wj_identifier",
+            "name": "标识（导入专用）",
+            "required": false,
+            "type": "text",
+            "layer": "file"
+        },
+        {
+            "key": "wj_parent_identifier",
+            "name": "父标识（导入专用）",
+            "required": false,
+            "type": "text",
+            "layer": "file"
+        },
+        {
+            "key": "wj_retention_status",
+            "name": "期限状态",
+            "required": false,
+            "type": "text",
+            "layer": "file"
+        }
+    ]
+}

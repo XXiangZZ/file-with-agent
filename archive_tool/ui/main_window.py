@@ -250,6 +250,9 @@ class MainWindow(QMainWindow):
         self.page_stack.setGraphicsEffect(shadow)
 
         right_layout.addWidget(self.page_stack)
+        # 设置伸缩因子：标题栏固定，页面容器撑满剩余空间
+        right_layout.setStretch(0, 0)
+        right_layout.setStretch(1, 1)
 
         main_layout.addWidget(right_widget)
 

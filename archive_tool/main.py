@@ -20,6 +20,18 @@ def main():
     # 使用Fusion样式，确保QSS在Windows上完整生效
     app.setStyle("Fusion")
 
+    # 调亮调色板，消除 Windows Fusion 样式下 QComboBox 弹窗的黑色底框
+    from PySide6.QtGui import QPalette, QColor
+    palette = app.palette()
+    palette.setColor(QPalette.Window, QColor("#FFFFFF"))
+    palette.setColor(QPalette.Base, QColor("#FFFFFF"))
+    palette.setColor(QPalette.Dark, QColor("#D1D5DB"))
+    palette.setColor(QPalette.Shadow, QColor("#D1D5DB"))
+    palette.setColor(QPalette.Mid, QColor("#D1D5DB"))
+    palette.setColor(QPalette.Midlight, QColor("#E5E9EC"))
+    palette.setColor(QPalette.Light, QColor("#F0F3F4"))
+    app.setPalette(palette)
+
     # 初始化数据库
     from db.database import init_database
     init_database()

@@ -84,65 +84,95 @@ class LogPage(QWidget):
         """)
         filter_layout.addWidget(self.type_combo)
 
-        date_label = QLabel('日期：')
+        date_label = QLabel('日期范围：')
         date_label.setStyleSheet("color: #6B7280; font-size: 13px;")
         filter_layout.addWidget(date_label)
 
-        self.date_edit = QDateEdit()
-        self.date_edit.setDate(QDate.currentDate())
-        self.date_edit.setDisplayFormat('yyyy-MM-dd')
-        self.date_edit.setStyleSheet("""
+        date_style = """
             QDateEdit {
                 border: 1px solid #D1D5DB;
                 border-radius: 6px;
                 padding: 4px 8px;
                 font-size: 13px;
-                min-width: 120px;
+                min-width: 110px;
                 background-color: white;
             }
-            QDateEdit:hover {
-                border-color: #3B82F6;
-            }
-            QDateEdit:focus {
-                border-color: #3B82F6;
-                outline: none;
-            }
-            QDateEdit::up-button {
+            QDateEdit:hover { border-color: #3B82F6; }
+            QDateEdit:focus { border-color: #3B82F6; outline: none; }
+            QDateEdit::drop-down {
                 subcontrol-origin: padding;
-                subcontrol-position: top right;
-                width: 24px;
+                subcontrol-position: center right;
+                width: 22px;
                 border: none;
                 border-left: 1px solid #E5E7EB;
-                border-radius: 0 6px 0 0;
+                border-radius: 0 6px 6px 0;
                 background-color: #F3F4F6;
             }
-            QDateEdit::up-button:hover {
-                background-color: #E5E7EB;
+            QDateEdit::drop-down:hover { background-color: #E5E7EB; }
+            QDateEdit QAbstractItemView {
+                border: 1px solid #E5E7EB;
+                border-radius: 6px;
+                background: white;
+                selection-background-color: #3B82F6;
+                selection-color: white;
             }
-            QDateEdit::up-arrow {
-                image: url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHZpZXdCb3g9IjAgMCAxMiAxMiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNNiAxMkM0Ljg5NSAxMiA0IDExLjEwNSA0IDEwLjAwMmMwLTEuMTA1Ljg5NS0yIDYtMnM2Ljg5NS44OTUgNiAyYy0uMTA1IDEuMTA1LTEuMjAxIDIuMDAyLTYgMi4wMDJ6bTAtOC4wMDJjLTEuMTA1IDAtMiAuODk1LTIgMmMuMCAxLjEwNS44OTUgMiAyIDJzMi0uODk1IDItMmMtLjAwMi0xLjEwNS0uODk2LTItMi0yem0wIDguMDAyLTQuMDAxLTQuMDAxbC43MDgtLjcwOGwxLjI5MiAxLjI5MiAyLjAwMS0yLjAwMWwxLjI5Mi0xLjI5Mi43MDguNzA4LTQuMDAxIDQuMDAxem0wLTguMDAyeiIvPjwvc3ZnPg==");
-                width: 14px;
-                height: 14px;
+        """
+
+        self.date_start = QDateEdit()
+        self.date_start.setDate(QDate.currentDate().addMonths(-1))
+        self.date_start.setDisplayFormat('yyyy-MM-dd')
+        self.date_start.setCalendarPopup(True)
+        self.date_start.setStyleSheet(date_style)
+        filter_layout.addWidget(self.date_start)
+
+        sep_label = QLabel('至')
+        sep_label.setStyleSheet("color: #9CA3AF; font-size: 13px;")
+        filter_layout.addWidget(sep_label)
+
+        self.date_end = QDateEdit()
+        self.date_end.setDate(QDate.currentDate())
+        self.date_end.setDisplayFormat('yyyy-MM-dd')
+        self.date_end.setCalendarPopup(True)
+        self.date_end.setStyleSheet(date_style)
+        filter_layout.addWidget(self.date_end)
+
+        self.date_clear_btn = QPushButton('全部时间')
+        self.date_clear_btn.setStyleSheet("""
+            QPushButton {
+                background-color: transparent;
+                color: #6B7280;
+                border: 1px solid #D1D5DB;
+                border-radius: 6px;
+                padding: 4px 10px;
+                font-size: 12px;
             }
-            QDateEdit::down-button {
-                subcontrol-origin: padding;
-                subcontrol-position: bottom right;
-                width: 24px;
-                border: none;
-                border-left: 1px solid #E5E7EB;
-                border-radius: 0 0 6px 0;
-                background-color: #F3F4F6;
-            }
-            QDateEdit::down-button:hover {
-                background-color: #E5E7EB;
-            }
-            QDateEdit::down-arrow {
-                image: url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHZpZXdCb3g9IjAgMCAxMiAxMiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNNiAxMnMtMS4xMDUtLjg5Ny0yLTItMi0yLjAwMmMuMDAyLTEuMTA1Ljg5Ni0yIDItMnMxLjg5Ny44OTUgMiAyLjAwMmMtLjAwMiAxLjEwNC0uODk2IDItMiAyem0wLTguMDAyYzEuMTA1IDAgMi4wMDAyLjg5NSAyLjAwMDIgMnMtLjg5NiAyLjAwMi0yLjAwMDIgMmMtMS4xMDUgMC0yLjAwMDItLjg5NS0yLjAwMDItMnMuODk2LTQuMDAxIDItNC4wMDF6bTQuMDAxIDQuMDAxLS43MDgtLjcwOC0xLjI5Mi0xLjI5Mi0yLjAwMSAyLjAwMS0xLjI5MiAxLjI5Mi0uNzA4LjcwOCA0LjAwMS00LjAwMXptMC04LjAwMnoiLz48L3N2Zz4=");
-                width: 14px;
-                height: 14px;
+            QPushButton:hover {
+                background-color: #FEE2E2;
+                color: #DC2626;
+                border-color: #FCA5A5;
             }
         """)
-        filter_layout.addWidget(self.date_edit)
+        self.date_clear_btn.clicked.connect(self._clear_date_filter)
+        filter_layout.addWidget(self.date_clear_btn)
+
+        self.date_month_btn = QPushButton('本月')
+        self.date_month_btn.setStyleSheet("""
+            QPushButton {
+                background-color: transparent;
+                color: #3B82F6;
+                border: 1px solid #BFDBFE;
+                border-radius: 6px;
+                padding: 4px 10px;
+                font-size: 12px;
+            }
+            QPushButton:hover {
+                background-color: #EFF6FF;
+                color: #1D4ED8;
+                border-color: #93C5FD;
+            }
+        """)
+        self.date_month_btn.clicked.connect(self._set_date_this_month)
+        filter_layout.addWidget(self.date_month_btn)
 
         keyword_label = QLabel('关键词：')
         keyword_label.setStyleSheet("color: #6B7280; font-size: 13px;")
@@ -284,11 +314,10 @@ class LogPage(QWidget):
         self.log_table.clearSelection()
 
         operation_type = self.type_combo.currentData()
-        date_filter = self.date_edit.date().toString('yyyy-MM-dd')
         keyword = self.keyword_edit.text().strip()
 
         query = '''
-            SELECT * FROM operation_log 
+            SELECT * FROM operation_log
             WHERE 1=1
         '''
         params = []
@@ -297,9 +326,12 @@ class LogPage(QWidget):
             query += ' AND operation_type = ?'
             params.append(operation_type)
 
-        if date_filter:
-            query += ' AND DATE(created_at) = ?'
-            params.append(date_filter)
+        # Date range filter
+        date_from = self.date_start.date().toString('yyyy-MM-dd')
+        date_to = self.date_end.date().toString('yyyy-MM-dd')
+        query += ' AND DATE(created_at) >= ? AND DATE(created_at) <= ?'
+        params.append(date_from)
+        params.append(date_to)
 
         if keyword:
             query += ' AND (operation_type LIKE ? OR details LIKE ?)'
@@ -341,6 +373,19 @@ class LogPage(QWidget):
             item.setForeground(QBrush(QColor('#9CA3AF')))
             self.log_table.setItem(0, 0, item)
             self.log_table.setSpan(0, 0, 1, 5)
+
+    def _clear_date_filter(self):
+        """清除日期筛选，重置为全部时间范围"""
+        self.date_start.setDate(QDate(2000, 1, 1))
+        self.date_end.setDate(QDate.currentDate())
+        self._load_logs()
+
+    def _set_date_this_month(self):
+        """设置日期范围为本月"""
+        today = QDate.currentDate()
+        self.date_start.setDate(QDate(today.year(), today.month(), 1))
+        self.date_end.setDate(today)
+        self._load_logs()
 
     def _format_type(self, operation_type):
         mappings = {

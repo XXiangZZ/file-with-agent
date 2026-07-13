@@ -154,6 +154,9 @@ class RecordManager:
             - filing_type: 归档类型
             - template_id: 模板ID
             - review_status: 审核状态
+            - upload_status: 上传状态
+            - batch_id: 批次ID
+            - year: 年度
             - keyword: 全文搜索关键词
         :return: 匹配的记录列表，包含字段值
         """
@@ -179,6 +182,21 @@ class RecordManager:
             if conditions.get('review_status'):
                 query += ' AND r.review_status = ?'
                 params.append(conditions['review_status'])
+
+            # 上传状态过滤
+            if conditions.get('upload_status'):
+                query += ' AND r.upload_status = ?'
+                params.append(conditions['upload_status'])
+
+            # 批次ID过滤
+            if conditions.get('batch_id'):
+                query += ' AND r.batch_id = ?'
+                params.append(conditions['batch_id'])
+
+            # 年度过滤
+            if conditions.get('year'):
+                query += ' AND r.year = ?'
+                params.append(conditions['year'])
 
             # 录入时间范围
             if conditions.get('start_date'):
@@ -234,4 +252,10 @@ class RecordManager:
         """获取所有批次列表"""
         with get_cursor() as cursor:
             cursor.execute('SELECT id, name, template_id, created_at FROM batches ORDER BY id DESC')
+            return [dict(row) for row in cursor.fetchall()]
+    
+    def get_all_years(self):
+        """获取所有年度列表"""
+        with get_cursor() as cursor:
+            cursor.execute('SELECT DISTINCT year FROM records WHERE year IS NOT NULL ORDER BY year DESC')
             return [dict(row) for row in cursor.fetchall()]

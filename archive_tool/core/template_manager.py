@@ -36,7 +36,8 @@ class TemplateManager:
                 result.append({
                     'id': row['id'],
                     'filename': row['name'],
-                    'name': row['name']
+                    'name': row['name'],
+                    'filing_type': row['filing_type'] or 'item',
                 })
             return result
 

@@ -45,8 +45,8 @@
         {"key": "wj_shoufawenleixing", "name": "收发文类型", "required": false, "type": "text", "layer": "file"},
         {"key": "wj_shoufabiaozhi", "name": "收发标志", "required": false, "type": "text", "layer": "file"},
         {"key": "wj_jieshouriqi", "name": "接收日期", "required": false, "type": "date", "layer": "file"},
-        {"key": "wj_nigao人", "name": "拟稿人", "required": false, "type": "text", "layer": "file"},
-        {"key": "wj_jinji程度", "name": "紧急程度", "required": false, "type": "text", "layer": "file"},
-        {"key": "wj_fawen格式", "name": "发文格式", "required": false, "type": "text", "layer": "file"}
+        {"key": "wj_drafter", "name": "拟稿人", "required": false, "type": "text", "layer": "file"},
+        {"key": "wj_urgency", "name": "紧急程度", "required": false, "type": "text", "layer": "file"},
+        {"key": "wj_document_format", "name": "发文格式", "required": false, "type": "text", "layer": "file"}
     ]
 }

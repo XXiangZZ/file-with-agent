@@ -2,12 +2,12 @@
 检索核对页面 - 支持多条件检索
 """
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QFormLayout, QComboBox,
-    QLineEdit, QPushButton, QTableWidget, QTableWidgetItem, QLabel, 
-    QGroupBox, QDateEdit, QDialog, QScrollArea, QTextEdit, QMessageBox,
-    QListView, QHeaderView
-)
-from PySide6.QtCore import Qt, QDate, QDateTime
+            QWidget, QVBoxLayout, QHBoxLayout, QFormLayout, QComboBox,
+            QLineEdit, QPushButton, QTableWidget, QTableWidgetItem, QLabel,
+            QGroupBox, QDialog, QScrollArea, QTextEdit, QMessageBox,
+            QListView, QHeaderView, QAbstractItemView, QLayout, QSizePolicy
+        )
+from PySide6.QtCore import Qt, QEvent
 
 from core.record_manager import RecordManager
 from core.template_manager import TemplateManager
@@ -21,8 +21,8 @@ class RecordDetailDialog(QDialog):
         super().__init__(parent)
         self.record = record
         self.setWindowTitle("档案详情")
-        self.setMinimumSize(600, 500)
-        self.resize(650, 600)
+        self.setMinimumSize(380, 300)
+        self.resize(420, 340)
 
         # 从模板动态获取字段显示名称（不写死字段）
         self._field_names = {}
@@ -39,22 +39,18 @@ class RecordDetailDialog(QDialog):
     
     def _init_ui(self):
         layout = QVBoxLayout(self)
-        
-        scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        content_widget = QWidget()
-        content_layout = QVBoxLayout(content_widget)
-        
+        layout.setSpacing(10)
+
         # 基本信息
         info_group = QGroupBox("基本信息")
         info_layout = QFormLayout(info_group)
         info_layout.addRow("记录ID:", QLabel(str(self.record.get('id', ''))))
         info_layout.addRow("批次ID:", QLabel(str(self.record.get('batch_id', ''))))
-        info_layout.addRow("模板ID:", QLabel(str(self.record.get('template_id', ''))))
-        info_layout.addRow("归档类型:", QLabel(self.record.get('filing_type', '')))
-        info_layout.addRow("审核状态:", QLabel(self.record.get('review_status', '')))
-        info_layout.addRow("录入时间:", QLabel(self.record.get('created_at', '')))
-        info_layout.addRow("更新时间:", QLabel(self.record.get('updated_at', '')))
+        info_layout.addRow("模板:", QLabel(str(self.record.get('template_name', ''))))
+        info_layout.addRow("归档类型:", QLabel('以卷归档' if self.record.get('filing_type') == 'volume' else '以件归档'))
+        review_map = {'pending': '待审核', 'reviewed': '已审核', 'uploaded': '已上传'}
+        info_layout.addRow("审核状态:", QLabel(review_map.get(self.record.get('review_status', ''), '')))
+        info_layout.addRow("录入时间:", QLabel(str(self.record.get('created_at', '') or '')[:19]))
 
         # 字段统计
         template_count = len(self._field_names)
@@ -66,48 +62,14 @@ class RecordDetailDialog(QDialog):
             stats_text = f"模板字段: {template_count}    当前记录: {value_count}（缺少 {diff} 个字段）"
         info_layout.addRow("字段统计:", QLabel(stats_text))
 
-        content_layout.addWidget(info_group)
+        layout.addWidget(info_group)
+        layout.addStretch()
 
-        # 字段值 — 按模板字段顺序遍历，缺失的显示"无"
-        values = self.record.get('values', {})
-        if self._field_names:
-            fields_group = QGroupBox("字段内容")
-            fields_layout = QVBoxLayout(fields_group)
-
-            # 字段区域可滚动
-            field_scroll = QScrollArea()
-            field_scroll.setWidgetResizable(True)
-            field_scroll.setMaximumHeight(400)
-            field_scroll_widget = QWidget()
-            field_scroll_layout = QFormLayout(field_scroll_widget)
-
-            for field_key, field_name in self._field_names.items():
-                value = values.get(field_key, '')
-                if value and str(value).strip():
-                    display_value = str(value)
-                else:
-                    display_value = "无"
-
-                if len(display_value) > 50:
-                    text_edit = QTextEdit()
-                    text_edit.setPlainText(display_value)
-                    text_edit.setReadOnly(True)
-                    text_edit.setMaximumHeight(80)
-                    field_scroll_layout.addRow(field_name + ":", text_edit)
-                else:
-                    field_scroll_layout.addRow(field_name + ":", QLabel(display_value))
-
-            field_scroll.setWidget(field_scroll_widget)
-            fields_layout.addWidget(field_scroll)
-            content_layout.addWidget(fields_group)
-        
-        scroll_area.setWidget(content_widget)
-        layout.addWidget(scroll_area)
-        
         # 关闭按钮
-        btn_layout = QHBoxLayout()
         close_btn = QPushButton("关闭")
+        close_btn.setFixedWidth(80)
         close_btn.clicked.connect(self.close)
+        btn_layout = QHBoxLayout()
         btn_layout.addStretch()
         btn_layout.addWidget(close_btn)
         layout.addLayout(btn_layout)
@@ -122,12 +84,58 @@ class SearchPage(QWidget):
         self.template_manager = TemplateManager()
         self.logger = Logger()
         self.search_results = []
+        self._display_fields = []  # [(key, name), ...] 当前显示的字段
+        self._row_records = []     # 每行对应的记录数据
         self._init_ui()
         self._load_templates()
+        self._load_batches()
+        self._load_years()
+        self._rebuild_table_columns()
         self._on_search()
 
     def _init_ui(self):
         """初始化UI"""
+        # 页面级样式表，对齐录入页面的做法，消除下拉弹窗的黑底框
+        self.setStyleSheet("""
+            QComboBox {
+                border: 1px solid #D1D5DB;
+                border-radius: 6px;
+                font-size: 13px;
+                background: white;
+                min-height: 26px;
+                max-height: 26px;
+            }
+            QComboBox::drop-down {
+                border: none;
+                width: 32px;
+                border-radius: 0 6px 6px 0;
+            }
+            QComboBox QAbstractItemView {
+                border: 1px solid #E5E7EB;
+                border-radius: 8px;
+                background: white;
+                selection-background-color: #3B82F6;
+                selection-color: white;
+                outline: none;
+            }
+            QComboBox QAbstractItemView::item {
+                padding: 6px 12px;
+                font-size: 12px;
+                color: #374151;
+                min-height: 24px;
+                border-radius: 4px;
+                margin: 1px 4px;
+            }
+            QComboBox QAbstractItemView::item:hover {
+                background: #EFF6FF;
+                color: #1E40AF;
+            }
+            QComboBox QAbstractItemView::item:selected {
+                background: #EFF6FF;
+                color: #1E40AF;
+            }
+        """)
+
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(15, 15, 15, 15)
         main_layout.setSpacing(12)
@@ -157,7 +165,7 @@ class SearchPage(QWidget):
         # 使用网格布局
         search_layout = QVBoxLayout()
         
-        # 第一行：模板选择 + 审核状态
+        # 第一行：模板选择 + 归档类型 + 审核状态
         row1 = QHBoxLayout()
         row1.setSpacing(15)
         
@@ -165,14 +173,27 @@ class SearchPage(QWidget):
         template_label.setStyleSheet("font-weight: bold; color: #2C3E50;")
         self.template_combo = QComboBox()
         self.template_combo.setView(QListView())
+        self.template_combo.setObjectName("templateCombo")
         self.template_combo.setMinimumWidth(150)
+        self.template_combo.currentIndexChanged.connect(self._on_template_changed)
         row1.addWidget(template_label)
         row1.addWidget(self.template_combo)
+        
+        filing_label = QLabel("归档类型:")
+        filing_label.setStyleSheet("font-weight: bold; color: #2C3E50;")
+        self.filing_combo = QComboBox()
+        self.filing_combo.setView(QListView())
+        self.filing_combo.setObjectName("filingTypeCombo")
+        self.filing_combo.addItems(["全部", "以件归档", "以卷归档"])
+        self.filing_combo.setMinimumWidth(120)
+        row1.addWidget(filing_label)
+        row1.addWidget(self.filing_combo)
         
         status_label = QLabel("审核状态:")
         status_label.setStyleSheet("font-weight: bold; color: #2C3E50;")
         self.status_combo = QComboBox()
         self.status_combo.setView(QListView())
+        self.status_combo.setObjectName("statusCombo")
         self.status_combo.addItems(["全部", "待审核", "已审核", "已上传"])
         self.status_combo.setMinimumWidth(120)
         row1.addWidget(status_label)
@@ -181,65 +202,30 @@ class SearchPage(QWidget):
         row1.addStretch()
         search_layout.addLayout(row1)
         
-        # 第二行：档案编号 + 题名
+        # 第二行：批次 + 年度
         row2 = QHBoxLayout()
         row2.setSpacing(15)
         
-        archive_no_label = QLabel("档案编号:")
-        archive_no_label.setStyleSheet("font-weight: bold; color: #2C3E50;")
-        self.archive_no_edit = QLineEdit()
-        self.archive_no_edit.setPlaceholderText("输入档案编号关键词")
-        row2.addWidget(archive_no_label)
-        row2.addWidget(self.archive_no_edit)
+        batch_label = QLabel("批次:")
+        batch_label.setStyleSheet("font-weight: bold; color: #2C3E50;")
+        self.batch_combo = QComboBox()
+        self.batch_combo.setView(QListView())
+        self.batch_combo.setObjectName("batchCombo")
+        self.batch_combo.setMinimumWidth(150)
+        row2.addWidget(batch_label)
+        row2.addWidget(self.batch_combo)
         
-        title_label = QLabel("题名:")
-        title_label.setStyleSheet("font-weight: bold; color: #2C3E50;")
-        self.title_edit = QLineEdit()
-        self.title_edit.setPlaceholderText("输入题名关键词")
-        row2.addWidget(title_label)
-        row2.addWidget(self.title_edit)
+        year_label = QLabel("年度:")
+        year_label.setStyleSheet("font-weight: bold; color: #2C3E50;")
+        self.year_combo = QComboBox()
+        self.year_combo.setView(QListView())
+        self.year_combo.setObjectName("yearCombo")
+        self.year_combo.setMinimumWidth(120)
+        row2.addWidget(year_label)
+        row2.addWidget(self.year_combo)
         
         row2.addStretch()
         search_layout.addLayout(row2)
-        
-        # 第三行：部门 + 录入时间范围
-        row3 = QHBoxLayout()
-        row3.setSpacing(15)
-        
-        dept_label = QLabel("部门:")
-        dept_label.setStyleSheet("font-weight: bold; color: #2C3E50;")
-        self.dept_edit = QLineEdit()
-        self.dept_edit.setPlaceholderText("输入部门名称")
-        row3.addWidget(dept_label)
-        row3.addWidget(self.dept_edit)
-        
-        date_label = QLabel("录入时间:")
-        date_label.setStyleSheet("font-weight: bold; color: #2C3E50;")
-        
-        date_layout = QHBoxLayout()
-        date_layout.setSpacing(5)
-        
-        self.start_date_edit = QDateEdit()
-        self.start_date_edit.setDisplayFormat("yyyy-MM-dd")
-        self.start_date_edit.setDate(QDate().addYears(-1))
-        self.start_date_edit.setFixedWidth(120)
-        
-        date_separator = QLabel("至")
-        
-        self.end_date_edit = QDateEdit()
-        self.end_date_edit.setDisplayFormat("yyyy-MM-dd")
-        self.end_date_edit.setDate(QDate.currentDate())
-        self.end_date_edit.setFixedWidth(120)
-        
-        date_layout.addWidget(self.start_date_edit)
-        date_layout.addWidget(date_separator)
-        date_layout.addWidget(self.end_date_edit)
-        
-        row3.addWidget(date_label)
-        row3.addLayout(date_layout)
-        
-        row3.addStretch()
-        search_layout.addLayout(row3)
         
         # 第四行：全文搜索 + 按钮
         row4 = QHBoxLayout()
@@ -322,10 +308,8 @@ class SearchPage(QWidget):
         result_layout.addWidget(self.result_count_label)
 
         self.result_table = QTableWidget()
-        self.result_table.setColumnCount(8)
-        self.result_table.setHorizontalHeaderLabels(
-            ['ID', '档案编号', '题名', '部门', '录入时间', '审核状态', '归档类型', '操作']
-        )
+        # 列将由 _rebuild_table_columns() 动态设置
+        self.result_table.setColumnCount(0)
         self.result_table.setStyleSheet("""
             QTableWidget {
                 border: 1px solid #E5E9EC;
@@ -340,50 +324,89 @@ class SearchPage(QWidget):
                     stop: 1 #2C3E50
                 );
                 color: white;
-                padding: 10px;
+                padding: 12px 16px;
                 border: none;
                 font-weight: bold;
             }
             QTableWidget::item {
-                padding: 8px;
-                border-bottom: 1px solid #E5E9EC;
+                padding: 6px 10px;
+                border-bottom: 1px solid #EEF2F4;
             }
             QTableWidget::item:selected {
                 background-color: #3498DB;
                 color: white;
             }
+            QTableWidget::item:alternate {
+                background-color: #FBFCFD;
+            }
+
+            /* Scrollbar */
+            QScrollBar:horizontal {
+                height: 10px;
+                background: transparent;
+                margin: 0px 20px 0 20px;
+            }
+            QScrollBar::handle:horizontal {
+                background: #B0B7BD;
+                min-width: 20px;
+                border-radius: 5px;
+            }
+            QScrollBar:vertical {
+                width: 10px;
+                background: transparent;
+                margin: 20px 0 20px 0;
+            }
+            QScrollBar::handle:vertical {
+                background: #B0B7BD;
+                min-height: 20px;
+                border-radius: 5px;
+            }
         """)
+
+        # 列宽将在 _rebuild_table_columns() 中动态设置
+        self.result_table.horizontalHeader().setMinimumSectionSize(60)
         
-        # 设置列宽
-        self.result_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-        self.result_table.setColumnWidth(1, 150)
-        self.result_table.setColumnWidth(2, 200)
-        self.result_table.setColumnWidth(3, 120)
-        self.result_table.setColumnWidth(4, 160)
-        self.result_table.setColumnWidth(5, 100)
-        self.result_table.setColumnWidth(6, 100)
-        self.result_table.setColumnWidth(7, 160)
-        
-        # 表头自适应
-        self.result_table.horizontalHeader().setStretchLastSection(True)
-        self.result_table.verticalHeader().setDefaultSectionSize(45)
+        # 表头自适应（最后一列固定宽度避免按钮被压缩）
+        self.result_table.horizontalHeader().setStretchLastSection(False)
+        self.result_table.verticalHeader().setDefaultSectionSize(46)
+        self.result_table.verticalHeader().setMinimumSectionSize(40)
         self.result_table.verticalHeader().setVisible(False)
+        # 交替行、整行选择、只读
+        self.result_table.setAlternatingRowColors(True)
+        self.result_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.result_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.result_table.horizontalHeader().setFixedHeight(48)
+        # 保证纵向滚动条出现时不会挤压操作列，始终能拖出水平滚动条看到完整按钮
+        self.result_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.result_table.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        # 设置表格大小策略：允许自由伸缩，内部滚动而非撑开父容器
+        self.result_table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        # 视口底部留白，防止水平滚动条遮挡最后一行的操作按钮
+        self.result_table.setViewportMargins(0, 0, 0, 8)
         result_layout.addWidget(self.result_table)
+        # 结果区域内表格伸缩，统计标签不伸缩
+        result_layout.setStretch(0, 0)
+        result_layout.setStretch(1, 1)
 
         result_group.setLayout(result_layout)
         main_layout.addWidget(result_group)
 
-        # 底部按钮栏
+        # 底部按钮栏（右侧对齐，增加间距和内边距）
         btn_layout = QHBoxLayout()
+        btn_layout.setContentsMargins(0, 12, 12, 12)
+        btn_layout.setSpacing(16)
+        btn_layout.setAlignment(Qt.AlignmentFlag.AlignRight)
 
-        self.review_btn = QPushButton('✅ 标记为已核对')
+        self.review_btn = QPushButton('✅  标记为已核对')
+        self.review_btn.setMinimumWidth(140)
+        self.review_btn.setFixedHeight(40)
         self.review_btn.setStyleSheet("""
             QPushButton {
                 background-color: #27AE60;
                 color: white;
                 border: none;
-                border-radius: 6px;
-                padding: 8px 24px;
+                border-radius: 8px;
+                padding: 8px 18px;
                 font-weight: bold;
                 font-size: 13px;
             }
@@ -397,14 +420,16 @@ class SearchPage(QWidget):
         self.review_btn.clicked.connect(self._on_mark_reviewed)
         btn_layout.addWidget(self.review_btn)
 
-        self.detail_btn = QPushButton('👁 查看详情')
+        self.detail_btn = QPushButton('👁  查看详情')
+        self.detail_btn.setMinimumWidth(120)
+        self.detail_btn.setFixedHeight(40)
         self.detail_btn.setStyleSheet("""
             QPushButton {
                 background-color: #9B59B6;
                 color: white;
                 border: none;
-                border-radius: 6px;
-                padding: 8px 24px;
+                border-radius: 8px;
+                padding: 8px 18px;
                 font-weight: bold;
                 font-size: 13px;
             }
@@ -418,17 +443,17 @@ class SearchPage(QWidget):
         self.detail_btn.clicked.connect(self._on_view_detail)
         btn_layout.addWidget(self.detail_btn)
 
-        btn_layout.addStretch()
-        
-        # 导出按钮
-        self.export_btn = QPushButton('📥 导出结果')
+        # 导出按钮（放在最右侧，增加图标左侧留白以保持图标与文字间距）
+        self.export_btn = QPushButton('📥  导出结果')
+        self.export_btn.setMinimumWidth(130)
+        self.export_btn.setFixedHeight(40)
         self.export_btn.setStyleSheet("""
             QPushButton {
                 background-color: #F39C12;
                 color: white;
                 border: none;
-                border-radius: 6px;
-                padding: 8px 24px;
+                border-radius: 8px;
+                padding: 8px 18px;
                 font-weight: bold;
                 font-size: 13px;
             }
@@ -444,12 +469,79 @@ class SearchPage(QWidget):
 
         main_layout.addLayout(btn_layout)
 
+        # 设置伸缩因子：检索条件（索引0）不伸缩，结果区域（索引1）伸缩，底部按钮（索引2）不伸缩
+        main_layout.setStretch(0, 0)
+        main_layout.setStretch(1, 1)
+        main_layout.setStretch(2, 0)
+
+    def _rebuild_table_columns(self):
+        """根据选中的模板动态重建表格列"""
+        template_id = self.template_combo.currentData()
+
+        if template_id:
+            # 特定模板：使用该模板的字段
+            template_name = self.template_manager.get_template_name(template_id)
+            fields = self.template_manager.get_fields(template_name) if template_name else []
+            self._display_fields = [(f['key'], f['name']) for f in fields]
+        else:
+            # "全部"模板：收集所有模板的字段（按首次出现顺序去重）
+            all_fields = {}  # key -> name
+            templates = self.record_manager.get_all_templates()
+            for tmpl in templates:
+                fields = self.template_manager.get_fields(tmpl['name'])
+                for f in fields:
+                    if f['key'] not in all_fields:
+                        all_fields[f['key']] = f['name']
+            self._display_fields = [(key, name) for key, name in all_fields.items()]
+
+        # 重建表格列
+        num_cols = len(self._display_fields) + 1  # 最后一列：操作
+        self.result_table.setColumnCount(num_cols)
+        headers = [name for _, name in self._display_fields] + ['操作']
+        self.result_table.setHorizontalHeaderLabels(headers)
+
+        # 动态设置列宽：字段列交互调整，操作列占满剩余空间
+        for i in range(len(self._display_fields)):
+            self.result_table.setColumnWidth(i, 130)
+            self.result_table.horizontalHeader().setSectionResizeMode(i, QHeaderView.ResizeMode.Interactive)
+        action_col = len(self._display_fields)
+        self.result_table.setColumnWidth(action_col, 200)
+        self.result_table.horizontalHeader().setSectionResizeMode(action_col, QHeaderView.ResizeMode.Interactive)
+        self.result_table.horizontalHeader().setMinimumSectionSize(60)
+        self.result_table.horizontalHeader().setStretchLastSection(True)
+        # 重建列后重新设置视口底部留白，防止滚动条遮挡操作按钮
+        self.result_table.setViewportMargins(0, 0, 0, 14)
+
+    def _on_template_changed(self):
+        """模板选择变化时重建列并重新搜索"""
+        self._rebuild_table_columns()
+        self._on_search()
+
     def _load_templates(self):
         """加载模板列表"""
+        # 阻止信号以免在加载过程中触发 _on_template_changed
+        self.template_combo.blockSignals(True)
         self.template_combo.addItem("全部", None)
         templates = self.record_manager.get_all_templates()
         for template in templates:
             self.template_combo.addItem(template['name'], template['id'])
+        self.template_combo.blockSignals(False)
+    
+    def _load_batches(self):
+        """加载批次列表"""
+        self.batch_combo.clear()
+        self.batch_combo.addItem("全部", None)
+        batches = self.record_manager.get_all_batches()
+        for batch in batches:
+            self.batch_combo.addItem(batch['name'], batch['id'])
+    
+    def _load_years(self):
+        """加载年度列表"""
+        self.year_combo.clear()
+        self.year_combo.addItem("全部", None)
+        years = self.record_manager.get_all_years()
+        for year in years:
+            self.year_combo.addItem(str(year['year']), year['year'])
 
     def _on_search(self):
         """执行检索"""
@@ -460,6 +552,13 @@ class SearchPage(QWidget):
         if template_id:
             conditions['template_id'] = template_id
         
+        # 归档类型
+        filing_text = self.filing_combo.currentText()
+        if filing_text == "以件归档":
+            conditions['filing_type'] = 'item'
+        elif filing_text == "以卷归档":
+            conditions['filing_type'] = 'volume'
+        
         # 审核状态
         status_text = self.status_combo.currentText()
         if status_text == "待审核":
@@ -469,26 +568,15 @@ class SearchPage(QWidget):
         elif status_text == "已上传":
             conditions['upload_status'] = 'uploaded'
         
-        # 档案编号
-        archive_no = self.archive_no_edit.text().strip()
-        if archive_no:
-            conditions['archive_no'] = archive_no
+        # 批次ID
+        batch_id = self.batch_combo.currentData()
+        if batch_id:
+            conditions['batch_id'] = batch_id
         
-        # 题名
-        title = self.title_edit.text().strip()
-        if title:
-            conditions['title'] = title
-        
-        # 部门
-        dept = self.dept_edit.text().strip()
-        if dept:
-            conditions['dept'] = dept
-        
-        # 录入时间范围
-        start_date = self.start_date_edit.date().toString("yyyy-MM-dd")
-        end_date = self.end_date_edit.date().toString("yyyy-MM-dd")
-        conditions['start_date'] = start_date + " 00:00:00"
-        conditions['end_date'] = end_date + " 23:59:59"
+        # 年度
+        year = self.year_combo.currentData()
+        if year:
+            conditions['year'] = year
         
         # 全文搜索
         keyword = self.keyword_edit.text().strip()
@@ -502,56 +590,45 @@ class SearchPage(QWidget):
         self._display_results()
 
     def _display_results(self):
-        """显示检索结果"""
+        """显示检索结果 - 动态列显示模板字段内容"""
         self.result_table.setRowCount(0)
         self.result_count_label.setText(f"共 {len(self.search_results)} 条记录")
-        
+
+        self._row_records = []
+        field_keys = [key for key, _ in self._display_fields]
+        action_col = len(field_keys)
+
         for row, record in enumerate(self.search_results):
             values = record.get('values', {})
-            
-            # 获取字段值
-            archive_no = values.get('file_no', values.get('bianhao', values.get('archive_no', '')))
-            title = values.get('title', values.get('mingcheng', values.get('subject', '')))
-            dept = values.get('dept', values.get('bumen', values.get('department', '')))
-            
-            # 审核状态映射
-            review_status = record.get('review_status', 'pending')
-            status_text = {
-                'pending': '待审核',
-                'reviewed': '已审核',
-                'uploaded': '已上传'
-            }.get(review_status, review_status)
-            
-            # 归档类型映射
-            filing_type = record.get('filing_type', '')
-            filing_text = '以卷归档' if filing_type == 'volume' else '以件归档'
-            
-            # 创建行
+            self._row_records.append(record)
+
             self.result_table.insertRow(row)
-            
-            self.result_table.setItem(row, 0, QTableWidgetItem(str(record['id'])))
-            self.result_table.setItem(row, 1, QTableWidgetItem(archive_no))
-            self.result_table.setItem(row, 2, QTableWidgetItem(title))
-            self.result_table.setItem(row, 3, QTableWidgetItem(dept))
-            self.result_table.setItem(row, 4, QTableWidgetItem(record.get('created_at', '')[:19]))
-            self.result_table.setItem(row, 5, QTableWidgetItem(status_text))
-            self.result_table.setItem(row, 6, QTableWidgetItem(filing_text))
-            
+
+            # 按当前显示字段顺序填充值（居中显示）
+            for col, key in enumerate(field_keys):
+                value = values.get(key, '')
+                item = QTableWidgetItem(str(value) if value else '')
+                item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                self.result_table.setItem(row, col, item)
+
             # 操作按钮
             action_widget = QWidget()
             action_layout = QHBoxLayout(action_widget)
-            action_layout.setContentsMargins(4, 0, 4, 0)
-            action_layout.setSpacing(6)
-            
+            action_layout.setContentsMargins(6, 2, 6, 2)
+            action_layout.setSpacing(8)
+            action_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
             view_btn = QPushButton("查看")
-            view_btn.setFixedSize(56, 28)
+            view_btn.setFixedSize(70, 28)
+            view_btn.setCursor(Qt.CursorShape.PointingHandCursor)
             view_btn.setStyleSheet("""
                 QPushButton {
                     background-color: #3498DB;
                     color: white;
                     border: none;
                     border-radius: 4px;
-                    font-size: 13px;
+                    padding: 0px;
+                    font-size: 12px;
                     font-weight: bold;
                 }
                 QPushButton:hover {
@@ -560,27 +637,29 @@ class SearchPage(QWidget):
             """)
             view_btn.clicked.connect(lambda checked, r=record: self._show_detail(r))
             action_layout.addWidget(view_btn)
-            
+
             review_btn = QPushButton("核对")
-            review_btn.setFixedSize(56, 28)
+            review_btn.setFixedSize(70, 28)
+            review_btn.setCursor(Qt.CursorShape.PointingHandCursor)
             review_btn.setStyleSheet("""
                 QPushButton {
                     background-color: #27AE60;
                     color: white;
                     border: none;
                     border-radius: 4px;
-                    font-size: 13px;
+                    padding: 0px;
+                    font-size: 12px;
                     font-weight: bold;
                 }
                 QPushButton:hover {
                     background-color: #2ECC71;
                 }
             """)
-            review_btn.clicked.connect(lambda checked, id=record['id']: self._mark_single_reviewed(id))
+            review_btn.clicked.connect(lambda checked, rid=record['id']: self._mark_single_reviewed(rid))
             action_layout.addWidget(review_btn)
-            
-            self.result_table.setCellWidget(row, 7, action_widget)
-        
+
+            self.result_table.setCellWidget(row, action_col, action_widget)
+
         # 更新按钮状态
         has_results = len(self.search_results) > 0
         self.review_btn.setEnabled(has_results)
@@ -590,13 +669,11 @@ class SearchPage(QWidget):
     def _on_reset(self):
         """重置检索条件"""
         self.template_combo.setCurrentIndex(0)
+        self.filing_combo.setCurrentIndex(0)
         self.status_combo.setCurrentIndex(0)
-        self.archive_no_edit.clear()
-        self.title_edit.clear()
-        self.dept_edit.clear()
+        self.batch_combo.setCurrentIndex(0)
+        self.year_combo.setCurrentIndex(0)
         self.keyword_edit.clear()
-        self.start_date_edit.setDate(QDate().addYears(-1))
-        self.end_date_edit.setDate(QDate.currentDate())
         self.result_table.setRowCount(0)
         self.result_count_label.setText("共 0 条记录")
         self.search_results = []
@@ -610,11 +687,12 @@ class SearchPage(QWidget):
         if not selected_rows:
             QMessageBox.warning(self, "提示", "请先选择要标记的记录")
             return
-        
+
         record_ids = []
-        for row in selected_rows:
-            record_id = int(self.result_table.item(row.row(), 0).text())
-            record_ids.append(record_id)
+        for model_index in selected_rows:
+            row = model_index.row()
+            if row < len(self._row_records):
+                record_ids.append(self._row_records[row]['id'])
         
         for record_id in record_ids:
             self.record_manager.update_record_status(record_id, review_status='reviewed')
@@ -660,6 +738,6 @@ class SearchPage(QWidget):
         )
         
         if path:
-            export_manager.export_search_results(self.search_results, path)
+            export_manager.export_search_results(self.search_results, path, self._display_fields)
             QMessageBox.information(self, "提示", f"导出成功\n{path}")
             self.logger.log('export_search', {'count': len(self.search_results), 'path': path})
