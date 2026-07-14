@@ -137,9 +137,9 @@ class MainWindow(QMainWindow):
             "📋 草稿管理",
             "🔍 检索核对",
             "📊 台账统计",
-            "📜 操作日志",
+            "📑 Excel导入",
             "⚙️ 模板管理",
-            "📑 Excel导入"
+            "📜 操作日志"
         ]
 
         for text in nav_items:
@@ -281,9 +281,9 @@ class MainWindow(QMainWindow):
         self.page_stack.addWidget(self.pages["draft"])
         self.page_stack.addWidget(self.pages["search"])
         self.page_stack.addWidget(self.pages["stats"])
-        self.page_stack.addWidget(self.pages["log"])
-        self.page_stack.addWidget(self.pages["template"])
         self.page_stack.addWidget(self.pages["excel"])
+        self.page_stack.addWidget(self.pages["template"])
+        self.page_stack.addWidget(self.pages["log"])
 
         self.pages["draft"].draft_load_requested.connect(self._on_load_draft_to_entry)
 
@@ -292,9 +292,9 @@ class MainWindow(QMainWindow):
             "草稿管理",
             "检索核对",
             "台账统计",
-            "操作日志",
+            "Excel批量导入",
             "模板管理",
-            "Excel批量导入"
+            "操作日志"
         ]
 
         self.nav_list.setCurrentRow(0)

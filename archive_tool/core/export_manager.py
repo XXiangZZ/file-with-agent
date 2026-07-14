@@ -118,7 +118,7 @@ class ExportManager:
             max_len = max(len(str(c.value or '')) for c in col)
             ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 40)
 
-    def export_search_results(self, records, output_path, display_fields=None):
+    def export_search_results(self, records, output_path, display_fields=None, include_template_column=False):
         """导出检索结果 - 使用模板字段作为列"""
         wb = openpyxl.Workbook()
         ws = wb.active
@@ -139,13 +139,21 @@ class ExportManager:
             field_names = {k: k for k in all_keys}
             headers = list(field_keys)
 
+        # 多模板时，在首列添加模板名
+        if include_template_column:
+            headers = ['模板'] + headers
+
         # 写入表头
         self._write_header(ws, headers)
 
         # 写入数据
         for row_idx, record in enumerate(records, 2):
             values = record.get('values', {})
-            for col_idx, key in enumerate(field_keys, 1):
+            col_start = 1
+            if include_template_column:
+                ws.cell(row_idx, 1, record.get('template_name', ''))
+                col_start = 2
+            for col_idx, key in enumerate(field_keys, col_start):
                 ws.cell(row_idx, col_idx, values.get(key, ''))
 
             # 隔行着色

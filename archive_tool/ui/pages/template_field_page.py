@@ -7,17 +7,20 @@
   4. 删除自定义字段
   5. 字段排序
 """
+import copy
+
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QFormLayout,
-    QComboBox, QLineEdit, QPushButton, QTableWidget,
+    QLineEdit, QPushButton, QTableWidget,
     QTableWidgetItem, QLabel, QMessageBox, QCheckBox,
-    QDialog, QDialogButtonBox, QListView, QHeaderView,
-    QTextEdit
+    QDialog, QDialogButtonBox, QHeaderView,
+    QTextEdit, QAbstractItemView
 )
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QColor
 
 from core.template_manager import TemplateManager
+from ui.components.fixed_combo import FixedComboBox
 
 
 class TemplateFieldPage(QWidget):
@@ -47,8 +50,7 @@ class TemplateFieldPage(QWidget):
         label.setStyleSheet("font-weight: 600; font-size: 14px; color: #374151;")
         header_layout.addWidget(label)
 
-        self.template_combo = QComboBox()
-        self.template_combo.setView(QListView())
+        self.template_combo = FixedComboBox()
         self.template_combo.setObjectName("templateCombo")
         self.template_combo.setFixedHeight(32)
         self.template_combo.setMinimumWidth(200)
@@ -101,16 +103,21 @@ class TemplateFieldPage(QWidget):
 
         self.fields_table = QTableWidget()
         self.fields_table.setObjectName("fieldsTable")
-        self.fields_table.setColumnCount(6)
+        self.fields_table.setColumnCount(5)
         self.fields_table.setHorizontalHeaderLabels([
-            "字段名称", "字段类型", "层级", "必填", "提示", "操作"
+            "字段名称", "字段类型", "层级", "必填", "提示"
         ])
-        self.fields_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.fields_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        self.fields_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Interactive)
         self.fields_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
         self.fields_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
         self.fields_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeToContents)
-        self.fields_table.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeToContents)
+        self.fields_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.Stretch)
+        self.fields_table.setColumnWidth(0, 140)
+        self.fields_table.horizontalHeader().setMinimumSectionSize(60)
+        self.fields_table.verticalHeader().setDefaultSectionSize(40)
+        self.fields_table.verticalHeader().setMinimumSectionSize(36)
+        self.fields_table.verticalHeader().setVisible(False)
+        self.fields_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.fields_table.setStyleSheet("""
             QTableWidget {
                 border: 1px solid #E5E7EB;
@@ -139,6 +146,7 @@ class TemplateFieldPage(QWidget):
         main_layout.addWidget(self.fields_table, stretch=1)
 
         footer_widget = QWidget()
+        footer_widget.setStyleSheet("background: transparent;")
         footer_layout = QHBoxLayout(footer_widget)
         footer_layout.setSpacing(8)
         footer_layout.addStretch()
@@ -229,51 +237,11 @@ class TemplateFieldPage(QWidget):
             hint_item = QTableWidgetItem(field.get('hint', ''))
             hint_item.setFlags(hint_item.flags() & ~Qt.ItemIsEditable)
 
-            is_custom = field.get('is_custom', False)
-            edit_btn = QPushButton("编辑")
-            edit_btn.setFixedSize(56, 24)
-            edit_btn.setStyleSheet("""
-                QPushButton {
-                    background: #DBEAFE;
-                    color: #1D4ED8;
-                    border: none;
-                    border-radius: 4px;
-                    font-size: 12px;
-                }
-                QPushButton:hover { background: #BFDBFE; }
-            """)
-            edit_btn.clicked.connect(lambda checked, r=row: self._on_edit_field(r))
-
-            delete_btn = QPushButton("删除")
-            delete_btn.setFixedSize(56, 24)
-            delete_btn.setStyleSheet("""
-                QPushButton {
-                    background: #FEE2E2;
-                    color: #DC2626;
-                    border: none;
-                    border-radius: 4px;
-                    font-size: 12px;
-                }
-                QPushButton:hover { background: #FECACA; }
-                QPushButton:disabled { background: #F3F4F6; color: #9CA3AF; }
-            """)
-            delete_btn.setEnabled(is_custom)
-            delete_btn.clicked.connect(lambda checked, r=row: self._on_delete_field(r))
-
-            action_widget = QWidget()
-            action_layout = QHBoxLayout(action_widget)
-            action_layout.setContentsMargins(4, 0, 4, 0)
-            action_layout.setSpacing(4)
-            action_layout.addWidget(edit_btn)
-            action_layout.addWidget(delete_btn)
-            action_layout.addStretch()
-
             self.fields_table.setItem(row, 0, name_item)
             self.fields_table.setItem(row, 1, type_item)
             self.fields_table.setItem(row, 2, layer_item)
             self.fields_table.setItem(row, 3, required_item)
             self.fields_table.setItem(row, 4, hint_item)
-            self.fields_table.setCellWidget(row, 5, action_widget)
 
         self.field_count_label.setText(f"共 {len(fields)} 个字段")
 
@@ -367,8 +335,7 @@ class FieldEditDialog(QDialog):
 
         type_label = QLabel("字段类型")
         type_label.setStyleSheet("font-weight: 500;")
-        self.type_combo = QComboBox()
-        self.type_combo.setView(QListView())
+        self.type_combo = FixedComboBox()
         self.type_combo.setFixedHeight(32)
         self.type_combo.addItems(["文本", "多行文本", "数字", "日期", "日期时间", "下拉选择"])
         type_map = {
@@ -381,8 +348,7 @@ class FieldEditDialog(QDialog):
 
         layer_label = QLabel("层级")
         layer_label.setStyleSheet("font-weight: 500;")
-        self.layer_combo = QComboBox()
-        self.layer_combo.setView(QListView())
+        self.layer_combo = FixedComboBox()
         self.layer_combo.setFixedHeight(32)
         self.layer_combo.addItems(["项目层", "案卷层", "文件层"])
         layer_map = {'project': 0, 'case': 1, 'file': 2, 'item': 2}
@@ -508,13 +474,19 @@ class FieldEditDialog(QDialog):
 
 
 class TemplateCreateDialog(QDialog):
-    """创建模板对话框"""
+    """创建模板对话框 — 支持基于已有模板创建并编辑字段"""
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("新建模板")
-        self.setMinimumSize(400, 280)
-        
+        self.setMinimumSize(560, 500)
+
+        # 获取已有模板列表
+        self._existing_templates = []
+        self._source_fields = []  # 从源模板加载的字段（可编辑副本）
+        if parent and hasattr(parent, 'template_manager'):
+            self._existing_templates = parent.template_manager.get_templates_with_id()
+
         self._init_ui()
 
     def _init_ui(self):
@@ -522,6 +494,7 @@ class TemplateCreateDialog(QDialog):
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(12)
 
+        # 上半部分：基本信息
         form_widget = QWidget()
         form_layout = QFormLayout(form_widget)
         form_layout.setSpacing(10)
@@ -546,7 +519,7 @@ class TemplateCreateDialog(QDialog):
 
         self.desc_edit = QTextEdit()
         self.desc_edit.setPlaceholderText("请输入模板描述（可选）")
-        self.desc_edit.setMaximumHeight(80)
+        self.desc_edit.setMaximumHeight(60)
         self.desc_edit.setStyleSheet("""
             QTextEdit {
                 border: 1px solid #D1D5DB;
@@ -563,20 +536,154 @@ class TemplateCreateDialog(QDialog):
 
         type_label = QLabel("归档类型")
         type_label.setStyleSheet("font-weight: 500;")
-        self.filing_type_combo = QComboBox()
-        self.filing_type_combo.setView(QListView())
+        self.filing_type_combo = FixedComboBox()
         self.filing_type_combo.setFixedHeight(32)
         self.filing_type_combo.addItems(["以件归档", "以卷归档"])
         form_layout.addRow(type_label, self.filing_type_combo)
 
+        copy_label = QLabel("复制字段自")
+        copy_label.setStyleSheet("font-weight: 500; color: #6B7280;")
+        self.copy_template_combo = FixedComboBox()
+        self.copy_template_combo.setFixedHeight(32)
+        self.copy_template_combo.addItem("不复制（空白模板）", None)
+        for tpl in self._existing_templates:
+            filing_label = "卷" if tpl.get('filing_type') == 'volume' else "件"
+            label_text = f"{tpl['name']}（以{filing_label}归档）"
+            self.copy_template_combo.addItem(label_text, tpl['id'])
+        self.copy_template_combo.currentIndexChanged.connect(self._on_copy_source_changed)
+        form_layout.addRow(copy_label, self.copy_template_combo)
+
         layout.addWidget(form_widget)
 
+        # 下半部分：字段编辑表格（选择复制源后显示）
+        self.fields_group_label = QLabel("字段列表（可修改名称和必填项）")
+        self.fields_group_label.setStyleSheet("font-weight: 600; font-size: 13px; color: #374151; margin-top: 4px;")
+        self.fields_group_label.setVisible(False)
+        layout.addWidget(self.fields_group_label)
+
+        self.fields_edit_table = QTableWidget()
+        self.fields_edit_table.setObjectName("fieldsEditTable")
+        self.fields_edit_table.setColumnCount(4)
+        self.fields_edit_table.setHorizontalHeaderLabels(["字段名称", "字段类型", "层级", "必填"])
+        self.fields_edit_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
+        self.fields_edit_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        self.fields_edit_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
+        self.fields_edit_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeToContents)
+        self.fields_edit_table.verticalHeader().setDefaultSectionSize(32)
+        self.fields_edit_table.verticalHeader().setVisible(False)
+        self.fields_edit_table.setMinimumHeight(120)
+        self.fields_edit_table.setStyleSheet("""
+            QTableWidget {
+                border: 1px solid #E5E7EB;
+                border-radius: 6px;
+                font-size: 13px;
+                background: white;
+            }
+            QTableWidget::item {
+                padding: 4px 8px;
+                border-bottom: 1px solid #F3F4F6;
+            }
+            QHeaderView::section {
+                background: #F9FAFB;
+                border: none;
+                border-bottom: 1px solid #E5E7EB;
+                padding: 6px 10px;
+                font-weight: 600;
+                font-size: 12px;
+                color: #374151;
+            }
+        """)
+        self.fields_edit_table.setVisible(False)
+        layout.addWidget(self.fields_edit_table, stretch=1)
+
+        # 按钮
         button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         button_box.button(QDialogButtonBox.Ok).setText("创建")
         button_box.button(QDialogButtonBox.Cancel).setText("取消")
         button_box.accepted.connect(self._on_ok)
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)
+
+    def _on_copy_source_changed(self, index):
+        """当选择复制源模板时，加载字段到编辑表格"""
+        source_id = self.copy_template_combo.currentData()
+        self._source_fields = []
+
+        if source_id:
+            for tpl in self._existing_templates:
+                if tpl['id'] == source_id:
+                    filing_type = tpl.get('filing_type', 'item')
+                    self.filing_type_combo.setCurrentIndex(0 if filing_type == 'item' else 1)
+                    break
+
+            if self.parent() and hasattr(self.parent(), 'template_manager'):
+                tmpl_name = self.parent().template_manager.get_template_name(source_id)
+                if tmpl_name:
+                    source_fields = self.parent().template_manager.get_fields(tmpl_name)
+                    # 深拷贝字段列表供用户编辑
+                    self._source_fields = copy.deepcopy(source_fields)
+                    self._populate_fields_table()
+                    self.fields_group_label.setVisible(True)
+                    self.fields_edit_table.setVisible(True)
+                    return
+
+        self.fields_group_label.setVisible(False)
+        self.fields_edit_table.setVisible(False)
+        self.fields_edit_table.setRowCount(0)
+
+    def _populate_fields_table(self):
+        """将可编辑的字段填充到表格"""
+        self.fields_edit_table.setRowCount(0)
+        type_map = {
+            'text': '文本', 'textarea': '多行文本', 'number': '数字',
+            'date': '日期', 'datetime': '日期时间', 'dropdown': '下拉选择'
+        }
+        layer_map = {'project': '项目层', 'case': '案卷层', 'file': '文件层', 'item': '文件层'}
+
+        for field in self._source_fields:
+            row = self.fields_edit_table.rowCount()
+            self.fields_edit_table.insertRow(row)
+
+            # 字段名称（可编辑）
+            name_item = QTableWidgetItem(field.get('name', ''))
+            self.fields_edit_table.setItem(row, 0, name_item)
+
+            # 字段类型（只读）
+            type_text = type_map.get(field.get('type', 'text'), field.get('type', 'text'))
+            type_item = QTableWidgetItem(type_text)
+            type_item.setFlags(type_item.flags() & ~Qt.ItemIsEditable)
+            self.fields_edit_table.setItem(row, 1, type_item)
+
+            # 层级（只读）
+            layer_text = layer_map.get(field.get('layer', 'file'), field.get('layer', 'file'))
+            layer_item = QTableWidgetItem(layer_text)
+            layer_item.setFlags(layer_item.flags() & ~Qt.ItemIsEditable)
+            self.fields_edit_table.setItem(row, 2, layer_item)
+
+            # 必填（复选框）
+            required_widget = QWidget()
+            required_layout = QHBoxLayout(required_widget)
+            required_layout.setContentsMargins(0, 0, 0, 0)
+            required_layout.setAlignment(Qt.AlignCenter)
+            required_check = QCheckBox()
+            required_check.setChecked(field.get('required', False))
+            required_check.toggled.connect(lambda checked, r=row: self._on_field_required_toggled(r, checked))
+            required_layout.addWidget(required_check)
+            self.fields_edit_table.setCellWidget(row, 3, required_widget)
+
+    def _on_field_required_toggled(self, row, checked):
+        """必填项切换"""
+        if row < len(self._source_fields):
+            self._source_fields[row]['required'] = checked
+
+    def _collect_edited_fields(self):
+        """从编辑表格收集修改后的字段数据"""
+        for row in range(self.fields_edit_table.rowCount()):
+            if row >= len(self._source_fields):
+                continue
+            name_item = self.fields_edit_table.item(row, 0)
+            if name_item:
+                self._source_fields[row]['name'] = name_item.text().strip()
 
     def _on_ok(self):
         name = self.name_edit.text().strip()
@@ -586,9 +693,34 @@ class TemplateCreateDialog(QDialog):
 
         description = self.desc_edit.toPlainText().strip()
         filing_type = 'item' if self.filing_type_combo.currentIndex() == 0 else 'volume'
+        copy_from_id = self.copy_template_combo.currentData()
+
+        # 如果有编辑表格，先收集修改
+        if self.fields_edit_table.isVisible():
+            self._collect_edited_fields()
+            # 验证字段名称不为空
+            for f in self._source_fields:
+                if not f.get('name', '').strip():
+                    QMessageBox.warning(self, "提示", "字段名称不能为空，请检查字段列表")
+                    return
 
         try:
             self.parent().template_manager.create_template(name, description, filing_type)
+            new_template_id = self.parent().template_manager.get_template_id(name)
+
+            if new_template_id and self._source_fields:
+                for field in self._source_fields:
+                    self.parent().template_manager.add_field(
+                        template_id=new_template_id,
+                        key=field['key'],
+                        name=field.get('name', '').strip(),
+                        required=field.get('required', False),
+                        field_type=field.get('type', 'text'),
+                        layer=field.get('layer', 'item'),
+                        dropdown_options=field.get('dropdown_options', []),
+                        hint=field.get('hint', '')
+                    )
+
             self.accept()
         except Exception as e:
             QMessageBox.warning(self, "失败", f"创建模板失败: {e}")

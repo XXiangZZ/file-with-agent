@@ -11,9 +11,13 @@ class RecordManager:
 
     def create_record(self, batch_id, template_id, name=None, filing_type=None, layer='item', parent_id=None, year=None, data=None, template_name=None):
         """创建新档案记录"""
+        # 规范化 filing_type：只允许 'item' 或 'volume'
+        if filing_type not in ('item', 'volume'):
+            filing_type = 'item'
+
         if data is not None and year is None:
             year = self._extract_year_from_data(data)
-        
+
         with get_cursor() as cursor:
             cursor.execute('''
                 INSERT INTO records (batch_id, template_id, template_name, name, filing_type, layer, parent_id, year)
@@ -146,24 +150,31 @@ class RecordManager:
         """
         高级检索 - 支持多条件组合查询
         :param conditions: 检索条件字典，支持以下键：
-            - archive_no: 档案编号
-            - title: 题名/名称
-            - dept: 部门
-            - start_date: 录入开始时间
-            - end_date: 录入结束时间
+            - archive_type: 档案类型
+            - quanzong_no: 全宗号
+            - class_no: 分类号
+            - category_name: 类目名称
+            - year: 年度
+            - retention_period: 保管期限
+            - security_level: 密级
+            - period_status: 期限状态
+            - carrier_type: 载体类型
+            - archival_date: 归档日期
             - filing_type: 归档类型
             - template_id: 模板ID
             - review_status: 审核状态
             - upload_status: 上传状态
             - batch_id: 批次ID
-            - year: 年度
             - keyword: 全文搜索关键词
         :return: 匹配的记录列表，包含字段值
         """
         with get_cursor() as cursor:
             query = '''
-                SELECT DISTINCT r.* FROM records r
+                SELECT DISTINCT r.*, t.name as template_name, b.name as batch_name FROM records r
                 LEFT JOIN record_values rv ON r.id = rv.record_id
+                LEFT JOIN templates t ON r.template_id = t.id
+                LEFT JOIN batches b ON r.batch_id = b.id
+                INNER JOIN batch_templates bt ON r.batch_id = bt.batch_id AND r.template_name = bt.template_name AND r.year = bt.year
                 WHERE 1=1
             '''
             params = []
@@ -173,10 +184,17 @@ class RecordManager:
                 query += ' AND r.template_id = ?'
                 params.append(conditions['template_id'])
 
-            # 归档类型过滤
+            # 归档类型过滤（兼容历史中文值）
             if conditions.get('filing_type'):
-                query += ' AND r.filing_type = ?'
-                params.append(conditions['filing_type'])
+                if conditions['filing_type'] == 'item':
+                    # '以件归档' 匹配 item 及常见中文同义词
+                    query += " AND r.filing_type IN ('item', '以件归档')"
+                elif conditions['filing_type'] == 'volume':
+                    # '以卷归档' 匹配 volume 及常见中文同义词
+                    query += " AND r.filing_type IN ('volume', '以卷归档')"
+                else:
+                    query += ' AND r.filing_type = ?'
+                    params.append(conditions['filing_type'])
 
             # 审核状态过滤
             if conditions.get('review_status'):
@@ -197,6 +215,51 @@ class RecordManager:
             if conditions.get('year'):
                 query += ' AND r.year = ?'
                 params.append(conditions['year'])
+
+            # 档案类型
+            if conditions.get('archive_type'):
+                query += ' AND EXISTS (SELECT 1 FROM record_values rv2 WHERE rv2.record_id = r.id AND rv2.field_key IN ("archive_type", "dangan_type") AND rv2.field_value LIKE ?)'
+                params.append(f'%{conditions["archive_type"]}%')
+
+            # 全宗号
+            if conditions.get('quanzong_no'):
+                query += ' AND EXISTS (SELECT 1 FROM record_values rv2 WHERE rv2.record_id = r.id AND rv2.field_key IN ("quanzong_no", "quanzong", "zonghao") AND rv2.field_value LIKE ?)'
+                params.append(f'%{conditions["quanzong_no"]}%')
+
+            # 分类号
+            if conditions.get('class_no'):
+                query += ' AND EXISTS (SELECT 1 FROM record_values rv2 WHERE rv2.record_id = r.id AND rv2.field_key IN ("class_no", "fenlei_no", "classification") AND rv2.field_value LIKE ?)'
+                params.append(f'%{conditions["class_no"]}%')
+
+            # 类目名称
+            if conditions.get('category_name'):
+                query += ' AND EXISTS (SELECT 1 FROM record_values rv2 WHERE rv2.record_id = r.id AND rv2.field_key IN ("category_name", "category", "leimu") AND rv2.field_value LIKE ?)'
+                params.append(f'%{conditions["category_name"]}%')
+
+            # 保管期限
+            if conditions.get('retention_period'):
+                query += ' AND EXISTS (SELECT 1 FROM record_values rv2 WHERE rv2.record_id = r.id AND rv2.field_key IN ("retention_period", "baoguan_qixian", "period", "wj_baoguanqixian", "aj_baoguanqixian") AND rv2.field_value LIKE ?)'
+                params.append(f'%{conditions["retention_period"]}%')
+
+            # 密级
+            if conditions.get('security_level'):
+                query += ' AND EXISTS (SELECT 1 FROM record_values rv2 WHERE rv2.record_id = r.id AND rv2.field_key IN ("security_level", "miji", "secret_level") AND rv2.field_value LIKE ?)'
+                params.append(f'%{conditions["security_level"]}%')
+
+            # 期限状态
+            if conditions.get('period_status'):
+                query += ' AND EXISTS (SELECT 1 FROM record_values rv2 WHERE rv2.record_id = r.id AND rv2.field_key IN ("period_status", "qixian_status", "status") AND rv2.field_value LIKE ?)'
+                params.append(f'%{conditions["period_status"]}%')
+
+            # 载体类型
+            if conditions.get('carrier_type'):
+                query += ' AND EXISTS (SELECT 1 FROM record_values rv2 WHERE rv2.record_id = r.id AND rv2.field_key IN ("carrier_type", "zaiti_type", "medium") AND rv2.field_value LIKE ?)'
+                params.append(f'%{conditions["carrier_type"]}%')
+
+            # 归档日期
+            if conditions.get('archival_date'):
+                query += ' AND EXISTS (SELECT 1 FROM record_values rv2 WHERE rv2.record_id = r.id AND rv2.field_key IN ("archival_date", "guidang_date", "file_date") AND rv2.field_value LIKE ?)'
+                params.append(f'%{conditions["archival_date"]}%')
 
             # 录入时间范围
             if conditions.get('start_date'):

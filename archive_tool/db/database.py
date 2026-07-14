@@ -206,5 +206,42 @@ def init_database():
         ''')
 
         conn.commit()
+
+        # 数据迁移：修复历史数据中的异常值
+        _migrate_data(cursor)
+
     finally:
         conn.close()
+
+
+def _migrate_data(cursor):
+    """数据迁移：修复历史数据中的异常值"""
+    # 修复 filing_type 为中文值的历史记录（应根据模板的 filing_type 来设置）
+    try:
+        cursor.execute('''
+            UPDATE records
+            SET filing_type = (
+                SELECT COALESCE(t.filing_type, 'item')
+                FROM templates t
+                WHERE t.id = records.template_id
+            )
+            WHERE filing_type NOT IN ('item', 'volume')
+            AND EXISTS (SELECT 1 FROM templates t WHERE t.id = records.template_id)
+        ''')
+        fixed = cursor.rowcount
+        if fixed > 0:
+            print(f"[数据迁移] 修复了 {fixed} 条记录的 filing_type 异常值")
+    except Exception as e:
+        print(f"[数据迁移] filing_type 修复失败: {e}")
+
+    # 将剩余非标准 filing_type 统一设为 'item'
+    try:
+        cursor.execute('''
+            UPDATE records SET filing_type = 'item'
+            WHERE filing_type NOT IN ('item', 'volume')
+        ''')
+        fixed = cursor.rowcount
+        if fixed > 0:
+            print(f"[数据迁移] 将 {fixed} 条记录的 filing_type 回退为 'item'")
+    except Exception as e:
+        print(f"[数据迁移] filing_type 回退失败: {e}")

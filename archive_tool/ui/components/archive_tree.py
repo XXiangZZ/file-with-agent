@@ -58,11 +58,12 @@ BATCH_ID_ROLE = Qt.ItemDataRole.UserRole + 4   # 批次 ID
 class NewBatchDialog(QDialog):
     """选择模板名称 + 起始年度，填写批次名称"""
 
-    def __init__(self, parent: Optional[QWidget] = None) -> None:
+    def __init__(self, parent: Optional[QWidget] = None, template_names: Optional[List[str]] = None) -> None:
         super().__init__(parent)
         self.setWindowTitle("新建批次")
         self.setMinimumWidth(340)
         self.setModal(True)
+        self._template_names = template_names or TEMPLATE_NAMES
         self._build_ui()
 
     def _build_ui(self) -> None:
@@ -92,7 +93,7 @@ class NewBatchDialog(QDialog):
         form.addRow("批次名称：", self.batch_name_edit)
 
         self.template_combo = QComboBox()
-        self.template_combo.addItems(TEMPLATE_NAMES)
+        self.template_combo.addItems(self._template_names)
         form.addRow("模板类型：", self.template_combo)
 
         year_widget = QWidget()
@@ -170,7 +171,7 @@ class NewBatchDialog(QDialog):
         if self.year_from.value() > self.year_to.value():
             QMessageBox.warning(self, "提示", "起始年度不能大于结束年度。")
             return
-        self.close()
+        self.accept()
 
     def batch_name(self) -> str:
         return self.batch_name_edit.text().strip()
@@ -422,9 +423,25 @@ class ArchiveTree(QWidget):
         self._data = self._load_from_db()
         self._populate()
 
+    def _get_template_names_from_db(self) -> List[str]:
+        """从数据库获取模板名称列表"""
+        names = []
+        try:
+            from db.database import get_cursor
+            with get_cursor() as cursor:
+                cursor.execute('SELECT name FROM templates ORDER BY name')
+                for row in cursor.fetchall():
+                    names.append(row['name'])
+        except Exception as e:
+            print(f"获取模板列表失败: {e}")
+        return names if names else TEMPLATE_NAMES
+
     def create_new_batch(self) -> None:
-        dlg = NewBatchDialog(self)
-        dlg.exec()
+        template_names = self._get_template_names_from_db()
+        dlg = NewBatchDialog(self, template_names)
+        result = dlg.exec()
+        if result != QDialog.DialogCode.Accepted:
+            return
 
         batch_name = dlg.batch_name()
         tmpl = dlg.template_name()
@@ -471,6 +488,24 @@ class ArchiveTree(QWidget):
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
         if reply != QMessageBox.StandardButton.Yes:
+            return False
+
+        from db.database import get_cursor
+        try:
+            with get_cursor() as cursor:
+                cursor.execute('''
+                    SELECT id FROM records WHERE batch_id = ?
+                ''', (batch_id,))
+                record_ids = [row['id'] for row in cursor.fetchall()]
+                
+                for record_id in record_ids:
+                    cursor.execute('DELETE FROM record_values WHERE record_id = ?', (record_id,))
+                
+                cursor.execute('DELETE FROM records WHERE batch_id = ?', (batch_id,))
+                cursor.execute('DELETE FROM batch_templates WHERE batch_id = ?', (batch_id,))
+                cursor.execute('DELETE FROM batches WHERE id = ?', (batch_id,))
+        except Exception as e:
+            QMessageBox.warning(self, "提示", f"删除失败: {e}")
             return False
 
         self._data.pop(batch_id, None)
@@ -598,12 +633,15 @@ class ArchiveTree(QWidget):
     def _add_template_to_batch(self, batch_item: QStandardItem) -> None:
         batch_id = batch_item.data(ID_ROLE)
         batch_name: str = batch_item.data(DATA_ROLE)
-        dlg = NewBatchDialog(self)
+        template_names = self._get_template_names_from_db()
+        dlg = NewBatchDialog(self, template_names)
         dlg.setWindowTitle("添加模板/年度")
         dlg.batch_name_edit.setText(batch_name)
         dlg.batch_name_edit.setEnabled(False)
 
-        dlg.exec()
+        result = dlg.exec()
+        if result != QDialog.DialogCode.Accepted:
+            return
 
         tmpl = dlg.template_name()
         years = dlg.year_range()
@@ -673,13 +711,22 @@ class ArchiveTree(QWidget):
 
         reply = QMessageBox.question(
             self, "确认删除",
-            f"删除模板「{tmpl_name}」及其所有年份？",
+            f"删除模板「{tmpl_name}」及其所有年份和档案？",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
         if reply == QMessageBox.StandardButton.Yes:
             from db.database import get_cursor
             try:
                 with get_cursor() as cursor:
+                    cursor.execute('''
+                        SELECT id FROM records WHERE batch_id = ? AND template_name = ?
+                    ''', (batch_id, tmpl_name))
+                    record_ids = [row['id'] for row in cursor.fetchall()]
+                    
+                    for record_id in record_ids:
+                        cursor.execute('DELETE FROM record_values WHERE record_id = ?', (record_id,))
+                    
+                    cursor.execute('DELETE FROM records WHERE batch_id = ? AND template_name = ?', (batch_id, tmpl_name))
                     cursor.execute('''
                         DELETE FROM batch_templates
                         WHERE batch_id = ? AND template_name = ?
@@ -699,10 +746,27 @@ class ArchiveTree(QWidget):
         batch_id = batch_item.data(ID_ROLE)
         tmpl_name: str = tmpl_item.data(DATA_ROLE)
         year: int = year_item.data(DATA_ROLE)
+        
+        reply = QMessageBox.question(
+            self, "确认删除",
+            f"确定要删除年份「{year}」及其所有档案吗？",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
 
         from db.database import get_cursor
         try:
             with get_cursor() as cursor:
+                cursor.execute('''
+                    SELECT id FROM records WHERE batch_id = ? AND template_name = ? AND year = ?
+                ''', (batch_id, tmpl_name, year))
+                record_ids = [row['id'] for row in cursor.fetchall()]
+                
+                for record_id in record_ids:
+                    cursor.execute('DELETE FROM record_values WHERE record_id = ?', (record_id,))
+                
+                cursor.execute('DELETE FROM records WHERE batch_id = ? AND template_name = ? AND year = ?', (batch_id, tmpl_name, year))
                 cursor.execute('''
                     DELETE FROM batch_templates
                     WHERE batch_id = ? AND template_name = ? AND year = ?

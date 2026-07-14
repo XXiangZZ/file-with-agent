@@ -6,16 +6,18 @@
   3. OCR识别：点击字段激活→框选图片区域→自动填入
 """
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QFormLayout, QGridLayout, QComboBox, QLineEdit,
+    QWidget, QVBoxLayout, QHBoxLayout, QFormLayout, QGridLayout, QLineEdit,
     QPushButton, QTableWidget, QTableWidgetItem, QLabel, QMessageBox,
     QGroupBox, QTextEdit, QScrollArea, QListWidget, QListWidgetItem, QFileDialog,
     QDateEdit, QDateTimeEdit, QFrame, QHeaderView, QDialog, QDialogButtonBox,
     QCalendarWidget, QInputDialog, QMenu, QCheckBox, QCompleter, QSplitter, QLayout,
-    QListView, QApplication, QAbstractItemView
+    QApplication, QAbstractItemView, QComboBox
 )
 from PySide6.QtCore import Qt, QDate, QDateTime, QTime, QEvent, QRect, QSize, QPoint
 from PySide6.QtGui import QColor
 import time
+
+from ui.components.fixed_combo import FixedComboBox
 
 
 class FlowLayout(QLayout):
@@ -638,8 +640,7 @@ class EntryPage(QWidget):
 
         # 模板选择：标签 + 下拉框
         row1_layout.addWidget(create_label("模板："))
-        self.template_combo = QComboBox()
-        self.template_combo.setView(QListView())
+        self.template_combo = FixedComboBox()
         self.template_combo.setObjectName("templateCombo")
         self.template_combo.setFixedSize(150, 28)
         self.template_combo.currentTextChanged.connect(self._on_template_changed)
@@ -647,8 +648,7 @@ class EntryPage(QWidget):
 
         # 归档类型：标签 + 下拉框
         row1_layout.addWidget(create_label("归档类型："))
-        self.filing_type_combo = QComboBox()
-        self.filing_type_combo.setView(QListView())
+        self.filing_type_combo = FixedComboBox()
         self.filing_type_combo.setObjectName("filingTypeCombo")
         self.filing_type_combo.setFixedSize(100, 28)
         self.filing_type_combo.addItems(["以件归档", "以卷归档"])
@@ -657,8 +657,7 @@ class EntryPage(QWidget):
 
         # 批次：标签 + 下拉框
         row1_layout.addWidget(create_label("批次："))
-        self.batch_combo = QComboBox()
-        self.batch_combo.setView(QListView())
+        self.batch_combo = FixedComboBox()
         self.batch_combo.setObjectName("batchCombo")
         self.batch_combo.setFixedHeight(28)
         self.batch_combo.setMinimumWidth(120)
@@ -893,8 +892,7 @@ class EntryPage(QWidget):
             label_text = f"{field_name} <span style='color:#EF4444'>*</span>" if required else field_name
 
             if options:
-                w = QComboBox()
-                w.setView(QListView())
+                w = FixedComboBox()
                 w.addItems(options)
                 w.installEventFilter(self)
                 self.combo_boxes.append(w)
@@ -2154,19 +2152,19 @@ class EntryPage(QWidget):
                 }
                 QComboBox QAbstractItemView {
                     border: 1px solid #E5E7EB;
-                    border-radius: 8px;
+                    border-radius: 6px;
                     background: white;
-                    selection-background-color: #3B82F6;
-                    selection-color: white;
+                    selection-background-color: #EFF6FF;
+                    selection-color: #1E40AF;
                     outline: none;
+                    padding: 4px 0;
                 }
                 QComboBox QAbstractItemView::item {
                     padding: 6px 12px;
                     font-size: 12px;
                     color: #374151;
                     min-height: 24px;
-                    border-radius: 4px;
-                    margin: 1px 4px;
+                    margin: 0;
                 }
                 QComboBox QAbstractItemView::item:hover {
                     background: #EFF6FF;
