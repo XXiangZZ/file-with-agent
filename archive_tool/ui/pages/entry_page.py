@@ -13,8 +13,8 @@ from PySide6.QtWidgets import (
     QCalendarWidget, QInputDialog, QMenu, QCheckBox, QCompleter, QSplitter, QLayout,
     QApplication, QAbstractItemView, QComboBox
 )
-from PySide6.QtCore import Qt, QDate, QDateTime, QTime, QEvent, QRect, QSize, QPoint
-from PySide6.QtGui import QColor
+from PySide6.QtCore import Qt, QDate, QDateTime, QTime, QEvent, QRect, QSize, QPoint, QLocale
+from PySide6.QtGui import QColor, QDoubleValidator
 import time
 
 from ui.components.fixed_combo import FixedComboBox
@@ -335,6 +335,7 @@ class EntryPage(QWidget):
         self.date_widgets = []
         self._templates_need_filing_choice = set()  # template names that support volume
         self._template_filing_types = {}  # name -> filing_type mapping
+        self._tree_selected_year = None  # 从目录树点击的年度节点锁定的目标年度（None表示未锁定）
 
         # OCR状态管理
         self.active_field = None              # 当前获得焦点的字段
@@ -407,7 +408,7 @@ class EntryPage(QWidget):
         header_layout = QHBoxLayout(header)
         header_layout.setContentsMargins(10, 0, 10, 0)
 
-        title = QLabel("\ud83d\udcf4 扫描件预览")
+        title = QLabel("扫描件预览")
         title.setStyleSheet("color: white; font-weight: bold; font-size: 12px;")
         header_layout.addWidget(title)
 
@@ -670,16 +671,16 @@ class EntryPage(QWidget):
         row2_layout = QHBoxLayout()
         row2_layout.setSpacing(8)
 
-        self.new_record_btn = QPushButton("＋ 新建")
-        self.save_draft_btn = QPushButton("📝 存草稿")
-        self.save_record_btn = QPushButton("✓ 保存")
-        self.fill_btn = QPushButton("📋 一键填充")
-        self.export_btn = QPushButton("↓ 导出")
-        self.validate_btn = QPushButton("✔ 校验")
-        self.import_btn = QPushButton("📥 Excel导入")
+        self.new_record_btn = QPushButton("新建")
+        self.save_draft_btn = QPushButton("存草稿")
+        self.save_record_btn = QPushButton("保存")
+        self.fill_btn = QPushButton("一键填充")
+        self.export_btn = QPushButton("导出")
+        self.validate_btn = QPushButton("校验")
+        self.import_btn = QPushButton("Excel导入")
 
         for btn in (self.new_record_btn, self.save_draft_btn, self.save_record_btn, self.fill_btn, self.export_btn, self.validate_btn, self.import_btn):
-            btn.setFixedHeight(26)
+            btn.setFixedHeight(32)
             btn.setMinimumWidth(42)
 
         self.new_record_btn.setStyleSheet("""
@@ -689,7 +690,7 @@ class EntryPage(QWidget):
                 border: none;
                 border-radius: 6px;
                 padding: 0 16px;
-                font-size: 12px;
+                font-size: 14px;
                 font-weight: 500;
             }
             QPushButton:hover { background: #2563EB; }
@@ -701,7 +702,7 @@ class EntryPage(QWidget):
                 border: none;
                 border-radius: 6px;
                 padding: 0 16px;
-                font-size: 12px;
+                font-size: 14px;
                 font-weight: 500;
             }
             QPushButton:hover { background: #4B5563; }
@@ -713,7 +714,7 @@ class EntryPage(QWidget):
                 border: none;
                 border-radius: 6px;
                 padding: 0 16px;
-                font-size: 12px;
+                font-size: 14px;
                 font-weight: 500;
             }
             QPushButton:hover { background: #047857; }
@@ -725,7 +726,7 @@ class EntryPage(QWidget):
                 border: 1px solid #C4B5FD;
                 border-radius: 6px;
                 padding: 0 16px;
-                font-size: 12px;
+                font-size: 14px;
                 font-weight: 500;
             }
             QPushButton:hover { background: #DDD6FE; }
@@ -737,7 +738,7 @@ class EntryPage(QWidget):
                 border: 1px solid #93C5FD;
                 border-radius: 6px;
                 padding: 0 16px;
-                font-size: 12px;
+                font-size: 14px;
                 font-weight: 500;
             }
             QPushButton:hover { background: #BFDBFE; }
@@ -749,7 +750,7 @@ class EntryPage(QWidget):
                 border: 1px solid #FCD34D;
                 border-radius: 6px;
                 padding: 0 16px;
-                font-size: 12px;
+                font-size: 14px;
                 font-weight: 500;
             }
             QPushButton:hover { background: #FDE68A; }
@@ -761,7 +762,7 @@ class EntryPage(QWidget):
                 border: 1px solid #A7F3D0;
                 border-radius: 6px;
                 padding: 0 16px;
-                font-size: 12px;
+                font-size: 14px;
                 font-weight: 500;
             }
             QPushButton:hover { background: #D1FAE5; }
@@ -802,6 +803,37 @@ class EntryPage(QWidget):
 
         self._load_batches()
 
+    def refresh_template_combo(self):
+        """刷新模板下拉框（模板管理页新增/删除模板后调用）"""
+        current_text = self.template_combo.currentText()
+        self.template_combo.blockSignals(True)
+        self.template_combo.clear()
+        self._templates_need_filing_choice.clear()
+        self._template_filing_types.clear()
+
+        templates = self.template_manager.get_all_templates()
+        for template in templates:
+            filing_type = template.get('filing_type', 'item')
+            self.template_combo.addItem(template['name'], template['filename'])
+            self._template_filing_types[template['name']] = filing_type
+            if filing_type == 'volume':
+                self._templates_need_filing_choice.add(template['name'])
+
+        self.template_combo.blockSignals(False)
+
+        # 尝试恢复之前选中的模板
+        if current_text:
+            idx = self.template_combo.findText(current_text)
+            if idx >= 0:
+                self.template_combo.setCurrentIndex(idx)
+                return
+
+        # 如果之前的模板不存在了，选中第一个
+        if templates:
+            self._on_template_changed(templates[0]['name'])
+
+        self._load_batches()
+
     def _load_batches(self):
         from db.database import get_cursor
         self.batch_combo.blockSignals(True)
@@ -825,6 +857,8 @@ class EntryPage(QWidget):
 
     def _on_template_changed(self, template_name):
         self.current_template = template_name
+        # 手动切换模板，不再锁定树中选择的年度，避免模板改变后误保存到不匹配的年度
+        self._tree_selected_year = None
         filename = self.template_manager.get_filename_by_name(template_name)
         if filename:
             self._load_template_fields(filename)
@@ -908,7 +942,14 @@ class EntryPage(QWidget):
                 w.installEventFilter(self)
             elif field_type == "number":
                 w = QLineEdit()
-                w.setInputMask("9999999999")
+                validator = QDoubleValidator()
+                validator.setLocale(QLocale(QLocale.Language.English, QLocale.Country.UnitedStates))
+                validator.setNotation(QDoubleValidator.Notation.StandardNotation)
+                validator.setBottom(0.0)
+                validator.setTop(9999999999.99)
+                validator.setDecimals(2)
+                w.setValidator(validator)
+                w.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
                 w.installEventFilter(self)
             elif field_type == "textarea":
                 w = QTextEdit()
@@ -1096,6 +1137,18 @@ class EntryPage(QWidget):
 
         data = self._collect_field_data()
 
+        # 若处于目录树年度锁定状态，同步将目标年度写回草稿的年度字段，
+        # 避免草稿再保存为正式记录时，年度字段残留旧值导致归入错误年度
+        if self._tree_selected_year is not None:
+            target_year = int(self._tree_selected_year)
+            for field in self.current_fields:
+                field_key = field.get('key', '')
+                field_name = field.get('name', '')
+                if 'year' in field_key.lower() or '年' in field_name:
+                    cur_v = data.get(field_key, '')
+                    if not cur_v or (str(cur_v).strip() and str(cur_v)[:4] != str(target_year)):
+                        data[field_key] = str(target_year)
+
         draft_name, ok = QInputDialog.getText(
             self, "保存草稿", "请输入草稿名称：",
             text=f"草稿_{QDateTime.currentDateTime().toString('yyyyMMdd_HHmmss')}"
@@ -1243,15 +1296,29 @@ class EntryPage(QWidget):
                 return
 
         try:
-            year = self._extract_year_from_data(data)
-            
-            if self.is_new_record:
+            # 优先使用从目录树年度节点锁定的目标年度，避免表单残留旧年度导致记录归入错误年度
+            if self._tree_selected_year is not None:
+                year = int(self._tree_selected_year)
+                # 同步写回data字典的年度字段，确保_extract_year_from_data再次提取也一致
+                for field in self.current_fields:
+                    field_key = field.get('key', '')
+                    field_name = field.get('name', '')
+                    if 'year' in field_key.lower() or '年' in field_name:
+                        current = data.get(field_key, '')
+                        if not current or (str(current).strip() and str(current)[:4] != str(year)):
+                            data[field_key] = str(year)
+            else:
+                year = self._extract_year_from_data(data)
+
+            # 用 current_record_id 判定新建/编辑，比 is_new_record 更可靠，
+            # 避免用户未点"新建"按钮直接填表单后保存时不弹名称输入的问题
+            if self.current_record_id is None:
                 # 弹窗输入记录名称
                 record_name, ok = QInputDialog.getText(self, "保存记录", "请输入记录名称：")
                 if not ok or not record_name.strip():
                     return
                 record_name = record_name.strip()
-                
+
                 record_id = self.record_manager.create_record(
                     batch_id=self.current_batch_id,
                     template_id=self.template_manager.get_template_id(self.current_template),
@@ -1265,6 +1332,9 @@ class EntryPage(QWidget):
                 self.is_new_record = False
                 QMessageBox.information(self, "成功", "档案记录已保存")
             else:
+                # 编辑已有记录：从已加载的记录信息中取出 record_name 供日志使用
+                existing = self.record_manager.get_record(self.current_record_id)
+                record_name = existing.get('name') if existing else ''
                 self.record_manager.update_record(self.current_record_id, data)
                 QMessageBox.information(self, "成功", "档案记录已更新")
 
@@ -1423,24 +1493,38 @@ class EntryPage(QWidget):
         
         action_single = export_menu.addAction("导出当前记录")
         action_batch = export_menu.addAction("导出批次所有记录")
-        
+
         pos = self.export_btn.mapToGlobal(self.export_btn.rect().bottomLeft())
         action = export_menu.exec(pos)
-        
+
         if action == action_single:
             if self.current_record_id:
                 self.export_manager.export_records([self.current_record_id], self.current_filing_type)
+                self.logger.log("export_single_record", {
+                    "record_id": self.current_record_id,
+                    "template_name": self.current_template,
+                    "batch_id": self.current_batch_id,
+                })
             else:
                 QMessageBox.warning(self, "提示", "请先选择或创建一条记录")
         elif action == action_batch:
             if self.current_batch_id:
-                records = self.record_manager.get_records_by_batch(self.current_batch_id)
-                if records:
-                    record_ids = [r['id'] for r in records]
-                    self.export_manager.export_records(record_ids, self.current_filing_type)
-                    QMessageBox.information(self, "成功", "批次导出完成")
+                batch_name = self.batch_combo.currentText()
+                result = self.export_manager.export_batch_by_template(self.current_batch_id, parent=self)
+                if result.get('success'):
+                    QMessageBox.information(self, "导出成功", result.get('message', ''))
+                    self.logger.log("export_batch_records", {
+                        "batch_id": self.current_batch_id,
+                        "batch_name": batch_name,
+                        "record_count": result.get('record_count', 0),
+                        "template_count": result.get('template_count', 0),
+                        "template_stats": result.get('template_stats', []),
+                        "output_file": result.get('output_file'),
+                    })
+                elif result.get('message') == '用户取消导出':
+                    pass
                 else:
-                    QMessageBox.warning(self, "提示", "当前批次没有记录")
+                    QMessageBox.warning(self, "提示", result.get('message', '导出失败'))
             else:
                 QMessageBox.warning(self, "提示", "请先选择批次")
 
@@ -1506,6 +1590,43 @@ class EntryPage(QWidget):
                     suffix += 1
                 return f"{base_name}-{suffix}"
 
+            # 从当前模板字段中构造"名称字段"的候选key：优先找中文名称含"名称/题名"的字段
+            def _build_name_candidate_keys():
+                preferred = []
+                fallback = []
+                for f in self.current_fields:
+                    name = f.get('name', '')
+                    key = f.get('key', '')
+                    if '名称' in name or '题名' in name:
+                        preferred.append(key)
+                    elif any(k in key.lower() for k in ('mingcheng', 'title', 'name', 'timing')):
+                        fallback.append(key)
+                return preferred + fallback
+
+            _name_candidate_keys = _build_name_candidate_keys()
+
+            def _extract_record_name(data_dict, row_idx):
+                """根据候选key顺序提取记录名称，全部无值时回退到导入记录N"""
+                for k in _name_candidate_keys:
+                    v = data_dict.get(k)
+                    if v and str(v).strip():
+                        return str(v).strip()
+                return f"导入记录{row_idx}"
+
+            def _resolve_year(data_dict):
+                """统一解析年度：优先树锁定年度，否则从data提取，并同步写回data字典"""
+                if self._tree_selected_year is not None:
+                    target_year = int(self._tree_selected_year)
+                    for f in self.current_fields:
+                        fk = f.get('key', '')
+                        fn = f.get('name', '')
+                        if 'year' in fk.lower() or '年' in fn:
+                            cur_v = data_dict.get(fk, '')
+                            if not cur_v or (str(cur_v).strip() and str(cur_v)[:4] != str(target_year)):
+                                data_dict[fk] = str(target_year)
+                    return target_year
+                return self._extract_year_from_data(data_dict)
+
             for idx, row_data in enumerate(import_data, 1):
                 if self.current_filing_type == 'item':
                     file_fields = [f for f in self.current_fields if f.get('layer', 'file') == 'file']
@@ -1516,8 +1637,8 @@ class EntryPage(QWidget):
                         fail_count += 1
                         continue
 
-                    year = self._extract_year_from_data(row_data)
-                    base_name = row_data.get('title') or row_data.get('mingcheng') or f"导入记录{idx}"
+                    year = _resolve_year(row_data)
+                    base_name = _extract_record_name(row_data, idx)
                     record_name = get_unique_name(base_name, existing_names)
                     existing_names.add(record_name)
 
@@ -1548,8 +1669,8 @@ class EntryPage(QWidget):
                         fail_count += 1
                         continue
 
-                    year = self._extract_year_from_data(row_data)
-                    base_name = row_data.get('title') or row_data.get('mingcheng') or f"导入记录{idx}"
+                    year = _resolve_year(row_data)
+                    base_name = _extract_record_name(row_data, idx)
                     record_name = get_unique_name(base_name, existing_names)
                     existing_names.add(record_name)
 
@@ -1646,6 +1767,8 @@ class EntryPage(QWidget):
 
     def _on_batch_changed(self, index):
         self.current_batch_id = self.batch_combo.itemData(index)
+        # 手动切换批次下拉，不再锁定树中选择的年度，防止批次不匹配导致错存
+        self._tree_selected_year = None
         print(f"批次切换: index={index}, batch_id={self.current_batch_id}")
         self.delete_batch_btn.setEnabled(self.current_batch_id is not None)
 
@@ -1721,9 +1844,11 @@ class EntryPage(QWidget):
     # ──────────────────────────────── 目录树事件处理 ────────────────────────
 
     def _on_tree_batch_selected(self, batch_id):
-        """点击批次节点：切换批次，清空表单"""
+        """点击批次节点：切换批次，清空表单，解除年度锁定（批次层面不关联具体年度）"""
         try:
             self.current_batch_id = batch_id
+            # 批次节点不锁定到具体年度，后续保存以表单填写的年度字段为准
+            self._tree_selected_year = None
 
             idx = self.batch_combo.findData(batch_id)
             if idx >= 0:
@@ -1736,8 +1861,36 @@ class EntryPage(QWidget):
         except Exception:
             pass
 
+    def _fill_year_to_fields(self, year):
+        """将指定的年度值回填到表单中所有匹配“年度”的字段控件"""
+        if year is None:
+            return
+        year_str = str(year)
+        for field in self.current_fields:
+            field_key = field.get('key', '')
+            field_name = field.get('name', '')
+            if 'year' in field_key.lower() or '年' in field_name:
+                w = self.form_widget.findChild(QLineEdit, field_key, Qt.FindChildrenRecursively)
+                if w:
+                    w.setText(year_str)
+                    continue
+                w = self.form_widget.findChild(QComboBox, field_key, Qt.FindChildrenRecursively)
+                if w:
+                    idx = w.findText(year_str)
+                    if idx >= 0:
+                        w.setCurrentIndex(idx)
+                    else:
+                        # 下拉框无精确匹配时，如果允许编辑则setEditText
+                        if w.isEditable():
+                            w.setEditText(year_str)
+                    continue
+                w = self.form_widget.findChild(QTextEdit, field_key, Qt.FindChildrenRecursively)
+                if w:
+                    w.setPlainText(year_str)
+                    continue
+
     def _on_tree_year_selected(self, batch_id, template_name, year):
-        """点击年份节点：切换模板+批次，清空表单，准备新建"""
+        """点击年份节点：切换模板+批次，锁定目标年度，回填表单年度字段，准备新建"""
         try:
             # 切换批次
             self.current_batch_id = batch_id
@@ -1751,21 +1904,29 @@ class EntryPage(QWidget):
                 if idx >= 0:
                     self.template_combo.setCurrentIndex(idx)
 
+            # 锁定从树中选择的目标年度
+            self._tree_selected_year = int(year) if year is not None else None
+
             # 清空表单，准备新建
             self.current_record_id = None
             self.is_new_record = True
             self._clear_form()
+
+            # 回填年度字段，避免表单保留上一次（首个年度）的旧值
+            self._fill_year_to_fields(self._tree_selected_year)
         except Exception:
             pass
 
     def _on_tree_record_selected(self, record_id):
-        """点击记录节点：加载记录到表单，进入编辑模式"""
+        """点击记录节点：加载记录到表单，进入编辑模式，解除年度锁定（进入单条记录上下文）"""
         try:
             record = self.record_manager.get_record(record_id)
             if record:
                 self.current_record_id = record_id
                 self.current_batch_id = record.get('batch_id')
                 self.is_new_record = False
+                # 加载已有记录时不再锁定年度，避免后续编辑或立即点新建时误沿用旧年度
+                self._tree_selected_year = None
 
                 idx = self.batch_combo.findData(self.current_batch_id)
                 if idx >= 0:

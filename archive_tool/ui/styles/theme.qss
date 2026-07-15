@@ -371,27 +371,6 @@ QListWidget::item:hover:!selected {
     background-color: #EBF5FB;
 }
 
-/* ============ 树 ============ */
-QTreeWidget, QTreeView {
-    border: 1px solid #D5D8DC;
-    border-radius: 8px;
-    background-color: white;
-    padding: 5px;
-    font-size: 13px;
-}
-
-QTreeWidget::item, QTreeView::item {
-    padding: 6px 10px;
-}
-
-QTreeWidget::item:selected, QTreeView::item:selected {
-    background-color: #3498DB;
-    color: white;
-}
-
-QTreeWidget::item:hover:!selected, QTreeView::item:hover:!selected {
-    background-color: #EBF5FB;
-}
 
 /* ============ 滚动条 ============ */
 QScrollBar:vertical {

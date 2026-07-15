@@ -188,7 +188,7 @@ class SearchPage(QWidget):
         
         row2.addStretch()
         
-        search_btn = QPushButton('🔍 搜索')
+        search_btn = QPushButton('搜索')
         search_btn.setStyleSheet("""
             QPushButton {
                 background-color: #3498DB;
@@ -197,7 +197,7 @@ class SearchPage(QWidget):
                 border-radius: 6px;
                 padding: 6px 20px;
                 font-weight: bold;
-                font-size: 13px;
+                font-size: 15px;
             }
             QPushButton:hover {
                 background-color: #2980B9;
@@ -207,7 +207,7 @@ class SearchPage(QWidget):
         search_btn.setFixedWidth(100)
         row2.addWidget(search_btn)
         
-        reset_btn = QPushButton('🔄 重置')
+        reset_btn = QPushButton('重置')
         reset_btn.setStyleSheet("""
             QPushButton {
                 background-color: #95A5A6;
@@ -216,7 +216,7 @@ class SearchPage(QWidget):
                 border-radius: 6px;
                 padding: 6px 20px;
                 font-weight: bold;
-                font-size: 13px;
+                font-size: 15px;
             }
             QPushButton:hover {
                 background-color: #7F8C8D;
@@ -226,7 +226,7 @@ class SearchPage(QWidget):
         reset_btn.setFixedWidth(100)
         row2.addWidget(reset_btn)
         
-        self.export_btn = QPushButton('📥 导出')
+        self.export_btn = QPushButton('导出')
         self.export_btn.setFixedWidth(100)
         self.export_btn.setFixedHeight(32)
         self.export_btn.setStyleSheet("""
@@ -237,7 +237,7 @@ class SearchPage(QWidget):
                 border-radius: 6px;
                 padding: 6px 16px;
                 font-weight: bold;
-                font-size: 12px;
+                font-size: 14px;
             }
             QPushButton:hover {
                 background-color: #F1C40F;
@@ -717,74 +717,65 @@ class SearchPage(QWidget):
             for col in range(1, len(headers) + 1):
                 ws_summary.column_dimensions[openpyxl.utils.get_column_letter(col)].width = 20
             
+            # 按 template_id 分组（比按名称分组更可靠）
             templates = {}
             for record in self.search_results:
-                template_name = record.get('template_name', '')
-                if template_name not in templates:
-                    templates[template_name] = []
-                templates[template_name].append(record)
-            
-            for template_name, records in templates.items():
+                tid = record.get('template_id')
+                if tid is None:
+                    tid = '__none__'
+                if tid not in templates:
+                    templates[tid] = []
+                templates[tid].append(record)
+
+            for tid, records in templates.items():
+                template_name = ''
+                if tid != '__none__':
+                    template = self.template_manager.get_template_by_id(tid)
+                    if template:
+                        template_name = template.get('name', '')
+                else:
+                    template = None
+                    # 回退：从记录中取 template_name
+                    template_name = records[0].get('template_name', '') if records else ''
+
                 if template_name:
                     ws = wb.create_sheet(title=template_name[:31])
                 else:
                     ws = wb.create_sheet(title="未分类")
-                
+
                 all_fields = set()
                 for record in records:
                     values = record.get('values', {})
                     all_fields.update(values.keys())
-                
-                from core.template_manager import TemplateManager
-                template_manager = TemplateManager()
-                template = template_manager.get_template_by_name(template_name)
-                
+
                 ordered_fields = []
-                if template and 'fields' in template:
-                    for field in template['fields']:
-                        field_key = field.get('key', '')
-                        if field_key in all_fields:
-                            ordered_fields.append(field_key)
-                
-                for field_key in all_fields:
-                    if field_key not in ordered_fields:
-                        ordered_fields.append(field_key)
-                
                 field_labels = {}
                 if template and 'fields' in template:
                     for field in template['fields']:
                         field_key = field.get('key', '')
+                        ordered_fields.append(field_key)
                         field_labels[field_key] = field.get('name', field_key)
+                else:
+                    # 回退：用 get_fields 通过名称获取字段映射
+                    if template_name:
+                        fallback_fields = self.template_manager.get_fields(template_name)
+                        for f in fallback_fields:
+                            ordered_fields.append(f['key'])
+                            field_labels[f['key']] = f['name']
                 
-                danghao_keys = ['wj_wenjiandanghao', 'wj_archive_code']
-                timing_keys = ['wj_wentiming', 'wj_title', 'wj_hetongmingcheng']
-                bianhao_keys = ['wj_wenjianbianhao', 'wj_file_number', 'wj_hetongbianhao']
-                def _extract(values, keys):
-                    for k in keys:
-                        v = values.get(k)
-                        if v is not None and str(v).strip() != '':
-                            return str(v)
-                    return ''
-                
-                ws_headers = ['文件档号', '文件题名', '文件编号', '名称'] + [field_labels.get(f, f) for f in ordered_fields]
-                
+                # 表头和行数据只使用模板定义的字段
+                ws_headers = [field_labels.get(f, f) for f in ordered_fields]
+
                 for col, header in enumerate(ws_headers, 1):
                     cell = ws.cell(row=1, column=col, value=header)
                     cell.font = header_font
                     cell.fill = header_fill
                     cell.alignment = header_alignment
                     cell.border = thin_border
-                
+
                 for row_idx, record in enumerate(records, 2):
                     values = record.get('values', {})
-                    row_data = [
-                        _extract(values, danghao_keys),
-                        _extract(values, timing_keys),
-                        _extract(values, bianhao_keys),
-                        str(record.get('name', ''))
-                    ]
-                    for field_key in ordered_fields:
-                        row_data.append(str(values.get(field_key, '')))
+                    row_data = [str(values.get(field_key, '')) for field_key in ordered_fields]
                     
                     for col_idx, value in enumerate(row_data, 1):
                         cell = ws.cell(row=row_idx, column=col_idx, value=str(value))

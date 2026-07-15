@@ -153,7 +153,7 @@ class TemplateManager:
         template_name = self.get_template_name(template_id)
         if not template_name:
             return None
-        return self.get_template(template_name)
+        return self.get_template_by_name(template_name)
 
     def get_templates_with_id(self):
         """获取所有模板列表（包含ID）"""

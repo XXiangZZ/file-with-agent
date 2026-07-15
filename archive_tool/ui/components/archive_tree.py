@@ -29,10 +29,10 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QInputDialog,
 )
-import os
+
+
 # ──────────────────────────────────────────────
 #  数据层（从数据库加载）
-# ──────────────────────────────────────────────
 
 # 模板列表（可扩展）
 TEMPLATE_NAMES: list[str] = [
@@ -303,7 +303,8 @@ class ArchiveTree(QWidget):
         self.tree_widget.setModel(self._proxy)
         self.tree_widget.setHeaderHidden(True)
         self.tree_widget.setAnimated(True)
-        self.tree_widget.setIndentation(9)
+        self.tree_widget.setExpandsOnDoubleClick(False)
+        self.tree_widget.setIndentation(18)
         self.tree_widget.setEditTriggers(
             QAbstractItemView.EditTrigger.DoubleClicked
             | QAbstractItemView.EditTrigger.EditKeyPressed
@@ -386,10 +387,25 @@ class ArchiveTree(QWidget):
         item.setData(text, DATA_ROLE)
 
         font = QFont("Microsoft YaHei")
-        font.setPointSize(9)
-        font.setBold(False)
+        if level == "batch":
+            font.setPointSize(9)
+            font.setBold(True)
+            item.setForeground(QBrush(QColor("#111827")))
+        elif level == "template":
+            font.setPointSize(8)
+            font.setBold(False)
+            item.setForeground(QBrush(QColor("#374151")))
+        elif level == "year":
+            font.setPointSize(8)
+            font.setBold(False)
+            item.setForeground(QBrush(QColor("#6B7280")))
+        elif level == "record":
+            font.setPointSize(8)
+            font.setBold(False)
+            item.setForeground(QBrush(QColor("#6B7280")))
+        else:
+            font.setPointSize(8)
         item.setFont(font)
-        item.setForeground(QBrush(QColor("#6B7280")))  # 统一用年度的颜色
 
         return item
 
@@ -612,11 +628,10 @@ class ArchiveTree(QWidget):
 
         batch_id = item.data(ID_ROLE)
         old_name: str = item.data(DATA_ROLE)
-        new_display = item.text().strip()
-        new_name = new_display.replace("📦  ", "").replace("📦 ", "").strip()
+        new_name = item.text().strip()
 
         if not new_name or new_name == old_name:
-            item.setText(f"📦  {old_name}")
+            item.setText(old_name)
             return
 
         from db.database import get_cursor
@@ -625,10 +640,10 @@ class ArchiveTree(QWidget):
                 cursor.execute("UPDATE batches SET name = ? WHERE id = ?", (new_name, batch_id))
             self._data[batch_id]['name'] = new_name
             item.setData(new_name, DATA_ROLE)
-            item.setText(f"📦  {new_name}")
+            item.setText(new_name)
         except Exception as e:
             QMessageBox.warning(self, "提示", f"重命名失败: {e}")
-            item.setText(f"📦  {old_name}")
+            item.setText(old_name)
 
     def _add_template_to_batch(self, batch_item: QStandardItem) -> None:
         batch_id = batch_item.data(ID_ROLE)
@@ -828,41 +843,24 @@ class ArchiveTree(QWidget):
 
     @staticmethod
     def _tree_style() -> str:
-        base = os.path.dirname(os.path.abspath(__file__))
-        # archive_tree.py -> components -> ui -> archive_tool -> resources
-        resources = os.path.join(base, "..", "..", "resources").replace("\\", "/")
-        right = f"{resources}/chevron-right.svg"
-        down  = f"{resources}/chevron-down.svg"
-
-        return f"""
-        QTreeView {{
+        return """
+        QTreeView {
             background: #FFFFFF;
             border: none;
             font-family: "Microsoft YaHei", sans-serif;
             outline: none;
-        }}
-        QTreeView::item {{
-            padding: 1px 8px 1px 2px;
-            min-height: 18px;
-        }}
-        QTreeView::item:hover {{
+            font-size: 13px;
+        }
+        QTreeView::item {
+            padding: 4px 8px 4px 2px;
+            min-height: 22px;
+            border-bottom: 1px solid #F3F4F6;
+        }
+        QTreeView::item:hover {
             background: #F0F4FF;
-        }}
-        QTreeView::item:selected {{
+        }
+        QTreeView::item:selected {
             background: #E8EFFE;
             color: #1E40AF;
-            border-left: 2px solid #3B82F6;
-        }}
-        QTreeView::branch {{
-            background: #FFFFFF;
-            width: 8px;
-        }}
-        QTreeView::branch:has-children:!has-siblings:closed,
-        QTreeView::branch:closed:has-children:has-siblings {{
-            image: url({right});
-        }}
-        QTreeView::branch:open:has-children:!has-siblings,
-        QTreeView::branch:open:has-children:has-siblings {{
-            image: url({down});
-        }}
+        }
         """

@@ -16,7 +16,6 @@ from ui.pages.draft_page import DraftPage
 from ui.pages.search_page import SearchPage
 from ui.pages.stats_page import StatsPage
 from ui.pages.log_page import LogPage
-from ui.pages.excel_import_page import ExcelImportPage
 from ui.pages.template_field_page import TemplateFieldPage
 
 from core.logger import Logger
@@ -58,120 +57,111 @@ class MainWindow(QMainWindow):
         # 左侧导航栏
         # =================================================
         nav_widget = QWidget()
-        nav_widget.setFixedWidth(240)
-
+        nav_widget.setFixedWidth(220)
         nav_widget.setStyleSheet("""
             QWidget{
-                background-color:#111827;
+                background: qlineargradient(
+                    x1: 0, y1: 0, x2: 0, y2: 1,
+                    stop: 0 #0F172A, stop: 1 #1E293B
+                );
             }
         """)
 
         nav_layout = QVBoxLayout(nav_widget)
-        nav_layout.setContentsMargins(0,0,0,0)
+        nav_layout.setContentsMargins(0, 0, 0, 0)
         nav_layout.setSpacing(0)
 
-        # =================================================
-        # LOGO区域
-        # =================================================
+        # ── LOGO ──
         logo_widget = QWidget()
-        logo_widget.setFixedHeight(110)
-
+        logo_widget.setFixedHeight(100)
         logo_layout = QVBoxLayout(logo_widget)
+        logo_layout.setContentsMargins(0, 24, 0, 8)
+        logo_layout.setSpacing(4)
         logo_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         logo_icon = QLabel("📚")
         logo_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        logo_icon.setStyleSheet("""
-            font-size:32px;
-            color:white;
-        """)
+        logo_icon.setStyleSheet("font-size: 28px; color: #93C5FD; background: transparent;")
+        logo_layout.addWidget(logo_icon)
 
         logo_title = QLabel("档案著录系统")
         logo_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         logo_title.setStyleSheet("""
-            color:white;
-            font-size:18px;
-            font-weight:bold;
+            color: #F1F5F9; font-size: 15px; font-weight: 700;
+            letter-spacing: 2px; background: transparent;
         """)
-
-        logo_layout.addWidget(logo_icon)
         logo_layout.addWidget(logo_title)
+
+        # 分割线
+        logo_divider = QWidget()
+        logo_divider.setFixedHeight(1)
+        logo_divider.setStyleSheet("""
+            background: qlineargradient(
+                x1: 0, y1: 0, x2: 1, y2: 0,
+                stop: 0 transparent, stop: 0.2 #334155, stop: 0.8 #334155, stop: 1 transparent
+            );
+        """)
+        logo_layout.addWidget(logo_divider)
 
         nav_layout.addWidget(logo_widget)
 
-        # =================================================
-        # 导航菜单
-        # =================================================
+        # ── 导航菜单 ──
         self.nav_list = QListWidget()
-
         self.nav_list.setStyleSheet("""
-            QListWidget{
-                border:none;
-                outline:none;
-                background:transparent;
-                padding-top:10px;
+            QListWidget {
+                border: none; outline: none;
+                background: transparent;
+                padding: 12px 0;
             }
-
-            QListWidget::item{
-                color:#D1D5DB;
-                margin:5px 12px;
-                padding:15px 20px;
-                border-radius:10px;
-                font-size:15px;
+            QListWidget::item {
+                color: #FFFFFF;
+                margin: 2px 14px;
+                padding: 12px 20px;
+                border-radius: 10px;
+                font-size: 22px;
+                font-weight: bold;
             }
-
-            QListWidget::item:hover{
-                background-color:#1F2937;
-                color:white;
+            QListWidget::item:hover {
+                background-color: rgba(255, 255, 255, 0.08);
+                color: #FFFFFF;
             }
-
-            QListWidget::item:selected{
-                background-color:#2563EB;
-                color:white;
-                font-weight:bold;
+            QListWidget::item:selected {
+                background-color: rgba(59, 130, 246, 0.2);
+                color: #BFDBFE;
+                font-weight: bold;
+                border-left: 3px solid #3B82F6;
+                padding-left: 17px;
             }
         """)
 
-        nav_items = [
-            "📝 档案录入",
-            "📋 草稿管理",
-            "🔍 检索核对",
-            "📊 台账统计",
-            "📑 Excel导入",
-            "⚙️ 模板管理",
-            "📜 操作日志"
-        ]
+        nav_items = ["档案录入", "草稿管理", "检索核对", "台账统计", "模板管理", "操作日志"]
 
         for text in nav_items:
             item = QListWidgetItem(text)
-            item.setSizeHint(QSize(200, 55))
+            item.setSizeHint(QSize(200, 44))
             self.nav_list.addItem(item)
 
-        self.nav_list.currentRowChanged.connect(
-            self._on_nav_changed
-        )
+        self.nav_list.currentRowChanged.connect(self._on_nav_changed)
 
         nav_layout.addWidget(self.nav_list)
+        nav_layout.addStretch()
 
-        # =================================================
-        # 底部版本信息（无登录功能）
-        # =================================================
+        # ── 底部版本信息 ──
         version_widget = QWidget()
-        version_widget.setFixedHeight(50)
-
+        version_widget.setFixedHeight(48)
         version_widget.setStyleSheet("""
-            background-color:#0F172A;
-            border-top:1px solid #1E293B;
+            background-color: rgba(0, 0, 0, 0.2);
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
         """)
-
         version_layout = QVBoxLayout(version_widget)
+        version_layout.setContentsMargins(0, 0, 0, 0)
+        version_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        self.version_label = QLabel("档案著录工序桌面工具 v2.0")
+        self.version_label = QLabel("v2.0")
+        self.version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.version_label.setStyleSheet("""
-            color:#64748B;
-            font-size:11px;
+            color: #475569; font-size: 11px; background: transparent;
         """)
-
         version_layout.addWidget(self.version_label)
 
         nav_layout.addWidget(version_widget)
@@ -265,7 +255,6 @@ class MainWindow(QMainWindow):
         self.pages["stats"] = StatsPage()
         self.pages["log"] = LogPage()
         self.pages["template"] = TemplateFieldPage()
-        self.pages["excel"] = ExcelImportPage()
 
         # 将 EntryPage 的按钮栏移动到标题栏
         if hasattr(self.pages["entry"], 'button_bar'):
@@ -281,7 +270,6 @@ class MainWindow(QMainWindow):
         self.page_stack.addWidget(self.pages["draft"])
         self.page_stack.addWidget(self.pages["search"])
         self.page_stack.addWidget(self.pages["stats"])
-        self.page_stack.addWidget(self.pages["excel"])
         self.page_stack.addWidget(self.pages["template"])
         self.page_stack.addWidget(self.pages["log"])
 
@@ -292,7 +280,6 @@ class MainWindow(QMainWindow):
             "草稿管理",
             "检索核对",
             "台账统计",
-            "Excel批量导入",
             "模板管理",
             "操作日志"
         ]
@@ -356,9 +343,15 @@ class MainWindow(QMainWindow):
                 self.page_titles[index]
             )
 
+        # 切换到档案录入页时刷新模板下拉框
+        if index == 0:
+            self.pages["entry"].refresh_template_combo()
         # 切换到草稿管理页时自动刷新
         if index == 1:
             self.pages["draft"]._load_drafts()
+        # 切换到检索核对页时自动刷新
+        if index == 2:
+            self.pages["search"]._on_search()
         # 切换到台账统计页时自动刷新
         if index == 3:
             self.pages["stats"]._load_stats()

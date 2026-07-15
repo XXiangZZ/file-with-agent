@@ -249,6 +249,11 @@ class TemplateFieldPage(QWidget):
         dialog = TemplateCreateDialog(self)
         if dialog.exec() == QDialog.Accepted:
             self._load_templates()
+            # 自动选中刚创建的模板
+            if hasattr(dialog, 'created_template_name'):
+                idx = self.template_combo.findText(dialog.created_template_name)
+                if idx >= 0:
+                    self.template_combo.setCurrentIndex(idx)
             QMessageBox.information(self, "成功", "模板已创建")
 
     def _on_add_field(self):
@@ -354,6 +359,9 @@ class FieldEditDialog(QDialog):
         layer_map = {'project': 0, 'case': 1, 'file': 2, 'item': 2}
         if self.field:
             self.layer_combo.setCurrentIndex(layer_map.get(self.field.get('layer', 'file'), 2))
+        else:
+            # 新增字段默认选"文件层"，避免以件归档模板过滤后表单为空
+            self.layer_combo.setCurrentIndex(2)
         form_layout.addRow(layer_label, self.layer_combo)
 
         self.required_check = QCheckBox()
@@ -721,6 +729,8 @@ class TemplateCreateDialog(QDialog):
                         hint=field.get('hint', '')
                     )
 
+            # 记录创建的模板名称，供父页面自动选中
+            self.created_template_name = name
             self.accept()
         except Exception as e:
             QMessageBox.warning(self, "失败", f"创建模板失败: {e}")

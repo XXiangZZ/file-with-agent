@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTableWidget,
     QLabel, QFrame, QPushButton, QTableWidgetItem,
     QHeaderView, QComboBox, QLineEdit, QDateEdit,
-    QDialog, QTextEdit, QDialogButtonBox
+    QDialog, QTextEdit, QDialogButtonBox, QFormLayout
 )
 from ui.components.fixed_combo import FixedComboBox
 from PySide6.QtCore import Qt, QEvent, QDate
@@ -391,7 +391,7 @@ class LogPage(QWidget):
         filter_layout.setContentsMargins(20, 16, 20, 16)
         filter_layout.setSpacing(12)
 
-        filter_title = QLabel('📋 筛选条件')
+        filter_title = QLabel('筛选条件')
         filter_title.setStyleSheet("""
             font-size: 16px;
             font-weight: bold;
@@ -492,19 +492,19 @@ class LogPage(QWidget):
 
         row2.addStretch()
 
-        search_btn = QPushButton('🔍 查询')
+        search_btn = QPushButton('查询')
         search_btn.setStyleSheet(BUTTON_STYLE_SEARCH)
-        search_btn.setFixedWidth(100)
+        search_btn.setFixedWidth(80)
         search_btn.clicked.connect(self._load_logs)
         row2.addWidget(search_btn)
 
-        reset_btn = QPushButton('🔄 重置')
+        reset_btn = QPushButton('重置')
         reset_btn.setStyleSheet(BUTTON_STYLE_RESET)
-        reset_btn.setFixedWidth(100)
+        reset_btn.setFixedWidth(80)
         reset_btn.clicked.connect(self._on_reset)
         row2.addWidget(reset_btn)
 
-        refresh_btn = QPushButton('⚡ 刷新')
+        refresh_btn = QPushButton('刷新')
         refresh_btn.setStyleSheet(BUTTON_STYLE_REFRESH)
         refresh_btn.setFixedWidth(100)
         refresh_btn.clicked.connect(self._load_logs)
@@ -529,7 +529,7 @@ class LogPage(QWidget):
         log_header = QHBoxLayout()
         log_header.setSpacing(10)
 
-        log_title = QLabel('📜 操作日志')
+        log_title = QLabel('操作日志')
         log_title.setStyleSheet("""
             font-size: 16px;
             font-weight: bold;
@@ -576,8 +576,6 @@ class LogPage(QWidget):
         self.log_table.setColumnWidth(0, 70)
         self.log_table.setMinimumHeight(400)
         self.log_table.setStyleSheet(TABLE_STYLE)
-
-        self.log_table.itemDoubleClicked.connect(self._on_log_double_clicked)
 
         log_layout.addWidget(self.log_table)
         main_layout.addWidget(log_card, 1)
@@ -811,226 +809,17 @@ class LogPage(QWidget):
         return text[:max_length] + '...'
 
     def _on_log_double_clicked(self, item):
-        row = item.row()
-        id_item = self.log_table.item(row, 0)
-        log_id = id_item.data(Qt.ItemDataRole.UserRole)
+        pass
 
-        from db.database import get_cursor
-        with get_cursor() as cursor:
-            cursor.execute('SELECT * FROM operation_log WHERE id = ?', (log_id,))
-            log = cursor.fetchone()
+    @staticmethod
+    def _detail_label(text: str) -> QLabel:
+        label = QLabel(f'{text}：')
+        label.setStyleSheet("color: #6B7280; font-size: 13px; background: transparent; border: none;")
+        return label
 
-        if not log:
-            return
-
-        dialog = QDialog(self)
-        dialog.setWindowTitle(f'📜 日志详情 - ID: {log_id}')
-        dialog.setMinimumSize(650, 520)
-        dialog.setStyleSheet("""
-            QDialog {
-                background: #F8FAFC;
-            }
-        """)
-
-        layout = QVBoxLayout(dialog)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(16)
-
-        info_card = QFrame()
-        info_card.setStyleSheet("""
-            QFrame {
-                background: white;
-                border: 1px solid #E5E7EB;
-                border-radius: 10px;
-            }
-        """)
-        info_layout = QVBoxLayout(info_card)
-        info_layout.setContentsMargins(16, 16, 16, 16)
-        info_layout.setSpacing(10)
-
-        info_title = QLabel('🔍 基本信息')
-        info_title.setStyleSheet("""
-            font-size: 14px;
-            font-weight: bold;
-            color: #1E3A8A;
-            padding: 0 0 4px 0;
-            background: transparent;
-            border: none;
-        """)
-        info_layout.addWidget(info_title)
-
-        row1_layout = QHBoxLayout()
-        row1_layout.setSpacing(20)
-
-        type_container = QWidget()
-        type_layout = QVBoxLayout(type_container)
-        type_layout.setSpacing(4)
-        type_layout.setContentsMargins(0, 0, 0, 0)
-
-        type_label = QLabel('操作类型')
-        type_label.setStyleSheet("color: #6B7280; font-size: 12px; background: transparent; border: none;")
-        type_layout.addWidget(type_label)
-
-        type_value = QLabel(self._format_type(log["operation_type"]))
-        type_value.setStyleSheet("""
-            color: #1F2937;
-            font-size: 14px;
-            font-weight: 600;
-            background: transparent;
-            border: none;
-        """)
-        type_layout.addWidget(type_value)
-
-        row1_layout.addWidget(type_container, 1)
-
-        machine_container = QWidget()
-        machine_layout = QVBoxLayout(machine_container)
-        machine_layout.setSpacing(4)
-        machine_layout.setContentsMargins(0, 0, 0, 0)
-
-        machine_label = QLabel('机器名称')
-        machine_label.setStyleSheet("color: #6B7280; font-size: 12px; background: transparent; border: none;")
-        machine_layout.addWidget(machine_label)
-
-        machine_value = QLabel(log["machine_name"] or 'N/A')
-        machine_value.setStyleSheet("""
-            color: #1F2937;
-            font-size: 14px;
-            font-weight: 600;
-            background: transparent;
-            border: none;
-        """)
-        machine_layout.addWidget(machine_value)
-
-        row1_layout.addWidget(machine_container, 1)
-
-        time_container = QWidget()
-        time_layout = QVBoxLayout(time_container)
-        time_layout.setSpacing(4)
-        time_layout.setContentsMargins(0, 0, 0, 0)
-
-        time_label = QLabel('操作时间')
-        time_label.setStyleSheet("color: #6B7280; font-size: 12px; background: transparent; border: none;")
-        time_layout.addWidget(time_label)
-
-        time_value = QLabel(self._format_time(log['created_at']))
-        time_value.setStyleSheet("""
-            color: #1F2937;
-            font-size: 14px;
-            font-weight: 600;
-            background: transparent;
-            border: none;
-        """)
-        time_layout.addWidget(time_value)
-
-        row1_layout.addWidget(time_container, 1)
-        info_layout.addLayout(row1_layout)
-
-        layout.addWidget(info_card)
-
-        desc_card = QFrame()
-        desc_card.setStyleSheet("""
-            QFrame {
-                background: white;
-                border: 1px solid #E5E7EB;
-                border-radius: 10px;
-            }
-        """)
-        desc_layout = QVBoxLayout(desc_card)
-        desc_layout.setContentsMargins(16, 16, 16, 16)
-        desc_layout.setSpacing(10)
-
-        desc_title = QLabel('📝 操作描述')
-        desc_title.setStyleSheet("""
-            font-size: 14px;
-            font-weight: bold;
-            color: #1E3A8A;
-            padding: 0 0 4px 0;
-            background: transparent;
-            border: none;
-        """)
-        desc_layout.addWidget(desc_title)
-
-        desc_text = self._format_details(log['operation_type'], log['details'])
-        desc_edit = QTextEdit()
-        desc_edit.setReadOnly(True)
-        desc_edit.setPlainText(desc_text)
-        desc_edit.setMaximumHeight(100)
-        desc_edit.setStyleSheet("""
-            QTextEdit {
-                border: 1px solid #E5E7EB;
-                border-radius: 8px;
-                font-size: 13px;
-                background-color: #F8FAFC;
-                padding: 10px;
-                color: #374151;
-            }
-        """)
-        desc_layout.addWidget(desc_edit)
-
-        layout.addWidget(desc_card)
-
-        raw_card = QFrame()
-        raw_card.setStyleSheet("""
-            QFrame {
-                background: white;
-                border: 1px solid #E5E7EB;
-                border-radius: 10px;
-            }
-        """)
-        raw_layout = QVBoxLayout(raw_card)
-        raw_layout.setContentsMargins(16, 16, 16, 16)
-        raw_layout.setSpacing(10)
-
-        raw_title = QLabel('📂 原始数据（JSON）')
-        raw_title.setStyleSheet("""
-            font-size: 14px;
-            font-weight: bold;
-            color: #1E3A8A;
-            padding: 0 0 4px 0;
-            background: transparent;
-            border: none;
-        """)
-        raw_layout.addWidget(raw_title)
-
-        raw_edit = QTextEdit()
-        raw_edit.setReadOnly(True)
-        raw_edit.setPlainText(log['details'] or '')
-        raw_edit.setMinimumHeight(160)
-        raw_edit.setStyleSheet("""
-            QTextEdit {
-                border: 1px solid #E5E7EB;
-                border-radius: 8px;
-                font-size: 12px;
-                font-family: 'Consolas', 'Courier New', monospace;
-                background-color: #0F172A;
-                padding: 12px;
-                color: #E2E8F0;
-            }
-        """)
-        raw_layout.addWidget(raw_edit, 1)
-
-        layout.addWidget(raw_card, 1)
-
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok)
-        ok_button = button_box.button(QDialogButtonBox.Ok)
-        ok_button.setText('✓ 确定')
-        ok_button.setStyleSheet("""
-            QPushButton {
-                background-color: #3B82F6;
-                color: white;
-                border: none;
-                border-radius: 6px;
-                padding: 8px 24px;
-                font-weight: bold;
-                font-size: 13px;
-                min-width: 100px;
-            }
-            QPushButton:hover {
-                background-color: #2563EB;
-            }
-        """)
-        button_box.accepted.connect(dialog.accept)
-        layout.addWidget(button_box)
-
-        dialog.exec()
+    @staticmethod
+    def _detail_value(text: str) -> QLabel:
+        label = QLabel(text if text else '-')
+        label.setWordWrap(True)
+        label.setStyleSheet("color: #1F2937; font-size: 13px; background: transparent; border: none;")
+        return label

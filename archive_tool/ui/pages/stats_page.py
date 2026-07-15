@@ -4,7 +4,8 @@
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTableWidget,
     QLabel, QGroupBox, QPushButton, QTableWidgetItem,
-    QHeaderView, QFileDialog, QMessageBox
+    QHeaderView, QFileDialog, QMessageBox, QTreeWidget,
+    QTreeWidgetItem
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
@@ -50,9 +51,9 @@ class StatsPage(QWidget):
 
         main_layout.addLayout(stats_layout)
 
-        # 批次统计表
-        batch_group = QGroupBox('批次统计')
-        batch_group.setStyleSheet("""
+        # 批次-模板-年度-记录 树形统计
+        tree_group = QGroupBox('台账层级统计')
+        tree_group.setStyleSheet("""
             QGroupBox {
                 font-weight: bold;
                 font-size: 14px;
@@ -71,20 +72,29 @@ class StatsPage(QWidget):
                 color: #3498DB;
             }
         """)
-        batch_layout = QVBoxLayout()
+        tree_layout = QVBoxLayout()
 
-        self.batch_table = QTableWidget()
-        self.batch_table.setColumnCount(5)
-        self.batch_table.setHorizontalHeaderLabels(
-            ['批次ID', '批次名称', '模板', '记录数', '状态']
-        )
-        self.batch_table.verticalHeader().setVisible(False)
-        self.batch_table.setStyleSheet("""
-            QTableWidget {
+        self.stats_tree = QTreeWidget()
+        self.stats_tree.setHeaderLabels(['名称 / 编号', '类型', '记录数', '状态'])
+        self.stats_tree.setAnimated(True)
+        self.stats_tree.setIndentation(24)
+        self.stats_tree.setStyleSheet("""
+            QTreeWidget {
                 border: 1px solid #E5E9EC;
                 border-radius: 8px;
                 background-color: white;
                 font-size: 13px;
+            }
+            QTreeWidget::item {
+                padding: 8px 4px;
+                border-bottom: 1px solid #F3F4F6;
+            }
+            QTreeWidget::item:hover {
+                background-color: #F0F4FF;
+            }
+            QTreeWidget::item:selected {
+                background-color: #E8EFFE;
+                color: #1F2937;
             }
             QHeaderView::section {
                 background-color: qlineargradient(
@@ -99,21 +109,52 @@ class StatsPage(QWidget):
             }
         """)
 
-        header = self.batch_table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
-        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+        header = self.stats_tree.header()
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Fixed)
         header.setSectionResizeMode(3, QHeaderView.ResizeMode.Fixed)
-        header.setSectionResizeMode(4, QHeaderView.ResizeMode.Fixed)
+        self.stats_tree.setColumnWidth(1, 80)
+        self.stats_tree.setColumnWidth(2, 80)
+        self.stats_tree.setColumnWidth(3, 80)
 
-        self.batch_table.setColumnWidth(0, 60)
-        self.batch_table.setColumnWidth(3, 70)
-        self.batch_table.setColumnWidth(4, 70)
+        self.stats_tree.itemExpanded.connect(self._on_tree_item_expanded)
+        tree_layout.addWidget(self.stats_tree)
 
-        batch_layout.addWidget(self.batch_table)
+        # 底部工具栏
+        tree_footer = QWidget()
+        tree_footer_layout = QHBoxLayout(tree_footer)
+        tree_footer_layout.setContentsMargins(0, 4, 0, 0)
 
-        batch_group.setLayout(batch_layout)
-        main_layout.addWidget(batch_group)
+        self.refresh_btn = QPushButton('↻ 刷新')
+        self.refresh_btn.setStyleSheet("""
+            QPushButton {
+                background: #F3F4F6; color: #374151;
+                border: 1px solid #D1D5DB; border-radius: 6px;
+                padding: 6px 16px; font-size: 13px;
+            }
+            QPushButton:hover { background: #E5E7EB; }
+        """)
+        self.refresh_btn.clicked.connect(self._load_stats)
+        tree_footer_layout.addWidget(self.refresh_btn)
+
+        self.export_tree_btn = QPushButton('导出层级统计')
+        self.export_tree_btn.setStyleSheet("""
+            QPushButton {
+                background: #059669; color: white;
+                border: none; border-radius: 6px;
+                padding: 6px 16px; font-size: 13px;
+            }
+            QPushButton:hover { background: #047857; }
+        """)
+        self.export_tree_btn.clicked.connect(self._export_batch_stats)
+        tree_footer_layout.addWidget(self.export_tree_btn)
+
+        tree_footer_layout.addStretch()
+        tree_layout.addWidget(tree_footer)
+
+        tree_group.setLayout(tree_layout)
+        main_layout.addWidget(tree_group)
 
 
 
@@ -173,7 +214,7 @@ class StatsPage(QWidget):
         return card
 
     def _load_stats(self):
-        """加载统计数据"""
+        """加载统计数据 - 树形层级：批次 → 模板 → 年度 → 记录"""
         with get_cursor() as cursor:
             # 总录入数
             cursor.execute('SELECT COUNT(*) as count FROM records')
@@ -200,77 +241,125 @@ class StatsPage(QWidget):
             failed = cursor.fetchone()['count']
             self.failed_label.findChild(QLabel).setText(str(failed))
 
-            # 批次统计
-            cursor.execute('''
-                SELECT b.id, b.name, 
-                       COALESCE(t.name, b.template_name, 'N/A') as template_name,
-                       COUNT(r.id) as record_count
-                FROM batches b
-                LEFT JOIN templates t ON b.template_id = t.id
-                LEFT JOIN records r ON r.batch_id = b.id
-                GROUP BY b.id
-            ''')
+            # 构建树形层级：批次 → 模板 → 年度 → 记录
+            self.stats_tree.clear()
+
+            # 查询所有批次
+            cursor.execute('SELECT id, name FROM batches ORDER BY id DESC')
             batches = cursor.fetchall()
 
-            self.batch_table.setRowCount(len(batches))
-            for i, batch in enumerate(batches):
-                id_item = QTableWidgetItem(str(batch['id']))
-                id_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-                self.batch_table.setItem(i, 0, id_item)
-                
-                name_item = QTableWidgetItem(batch['name'])
-                name_item.setToolTip(batch['name'])
-                self.batch_table.setItem(i, 1, name_item)
-                
-                template_item = QTableWidgetItem(batch['template_name'] or 'N/A')
-                template_item.setToolTip(batch['template_name'] or 'N/A')
-                self.batch_table.setItem(i, 2, template_item)
-                
-                count_item = QTableWidgetItem(str(batch['record_count']))
-                count_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-                self.batch_table.setItem(i, 3, count_item)
-                
-                status_item = QTableWidgetItem('正常')
-                status_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-                self.batch_table.setItem(i, 4, status_item)
+            for batch in batches:
+                batch_id = batch['id']
+                batch_name = batch['name']
+
+                # 该批次下的记录数
+                cursor.execute('SELECT COUNT(*) as cnt FROM records WHERE batch_id = ?', (batch_id,))
+                batch_count = cursor.fetchone()['cnt']
+
+                batch_item = QTreeWidgetItem(self.stats_tree)
+                batch_item.setText(0, batch_name)
+                batch_item.setText(1, '批次')
+                batch_item.setTextAlignment(1, Qt.AlignmentFlag.AlignCenter)
+                batch_item.setText(2, str(batch_count))
+                batch_item.setTextAlignment(2, Qt.AlignmentFlag.AlignCenter)
+                batch_item.setText(3, '')
+                batch_item.setData(0, Qt.UserRole, {'type': 'batch', 'id': batch_id})
+                font = batch_item.font(0)
+                font.setBold(True)
+                batch_item.setFont(0, font)
+
+                # 该批次下按模板+年度分组
+                cursor.execute('''
+                    SELECT template_name, year, COUNT(*) as cnt
+                    FROM records
+                    WHERE batch_id = ? AND template_name IS NOT NULL
+                    GROUP BY template_name, year
+                    ORDER BY template_name, year DESC
+                ''', (batch_id,))
+                groups = cursor.fetchall()
+
+                # 先按模板名分组
+                template_groups = {}
+                for g in groups:
+                    tmpl = g['template_name'] or '未分类'
+                    if tmpl not in template_groups:
+                        template_groups[tmpl] = {'total': 0, 'years': []}
+                    template_groups[tmpl]['total'] += g['cnt']
+                    template_groups[tmpl]['years'].append((g['year'], g['cnt']))
+
+                for tmpl_name, tmpl_data in template_groups.items():
+                    tmpl_item = QTreeWidgetItem(batch_item)
+                    tmpl_item.setText(0, tmpl_name)
+                    tmpl_item.setText(1, '模板')
+                    tmpl_item.setTextAlignment(1, Qt.AlignmentFlag.AlignCenter)
+                    tmpl_item.setText(2, str(tmpl_data['total']))
+                    tmpl_item.setTextAlignment(2, Qt.AlignmentFlag.AlignCenter)
+                    tmpl_item.setText(3, '')
+                    tmpl_item.setData(0, Qt.UserRole, {'type': 'template', 'name': tmpl_name, 'batch_id': batch_id})
+
+                    for year, year_count in tmpl_data['years']:
+                        year_item = QTreeWidgetItem(tmpl_item)
+                        year_item.setText(0, f'{year}年')
+                        year_item.setText(1, '年度')
+                        year_item.setTextAlignment(1, Qt.AlignmentFlag.AlignCenter)
+                        year_item.setText(2, str(year_count))
+                        year_item.setTextAlignment(2, Qt.AlignmentFlag.AlignCenter)
+                        year_item.setText(3, '')
+                        year_item.setData(0, Qt.UserRole, {'type': 'year', 'year': year, 'template_name': tmpl_name, 'batch_id': batch_id})
+
+            self.stats_tree.expandAll()
+
+    def _on_tree_item_expanded(self, item):
+        """节点展开事件（预留，当前为全量加载，无需懒加载）"""
+        pass
 
     def _export_batch_stats(self):
-        """导出批次统计表"""
+        """导出批次统计表（树形结构展开为列表）"""
         filename, _ = QFileDialog.getSaveFileName(
             self, "导出批次统计", f"batch_stats_{datetime.now().strftime('%Y%m%d')}",
             "Excel文件 (*.xlsx)"
         )
-        
+
         if not filename:
             return
-        
+
         if not filename.endswith('.xlsx'):
             filename += '.xlsx'
-        
+
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = '批次统计'
-        
-        headers = ['批次ID', '批次名称', '模板', '记录数', '状态']
+
+        headers = ['批次', '模板', '年度', '记录数']
         header_fill = PatternFill('solid', fgColor='34495E')
         header_font = Font(bold=True, color='FFFFFF')
-        
+
         for j, h in enumerate(headers, 1):
             c = ws.cell(1, j, h)
             c.font = header_font
             c.fill = header_fill
             c.alignment = Alignment(horizontal='center', vertical='center')
-        
-        row_count = self.batch_table.rowCount()
-        for i in range(row_count):
-            for j in range(5):
-                item = self.batch_table.item(i, j)
-                ws.cell(i + 2, j + 1, item.text() if item else '')
-        
+
+        row = 2
+        root = self.stats_tree.invisibleRootItem()
+        for bi in range(root.childCount()):
+            batch_item = root.child(bi)
+            batch_name = batch_item.text(0)
+            for ti in range(batch_item.childCount()):
+                tmpl_item = batch_item.child(ti)
+                tmpl_name = tmpl_item.text(0)
+                for yi in range(tmpl_item.childCount()):
+                    year_item = tmpl_item.child(yi)
+                    ws.cell(row, 1, batch_name)
+                    ws.cell(row, 2, tmpl_name)
+                    ws.cell(row, 3, year_item.text(0))
+                    ws.cell(row, 4, int(year_item.text(2)))
+                    row += 1
+
         for col in ws.columns:
             max_len = max(len(str(c.value or '')) for c in col)
             ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 40)
-        
+
         wb.save(filename)
         QMessageBox.information(self, "成功", f"批次统计已导出到:\n{filename}")
 
@@ -280,21 +369,22 @@ class StatsPage(QWidget):
             self, "导出全部数据", f"all_data_{datetime.now().strftime('%Y%m%d')}",
             "Excel文件 (*.xlsx)"
         )
-        
+
         if not filename:
             return
-        
+
         if not filename.endswith('.xlsx'):
             filename += '.xlsx'
-        
+
         wb = openpyxl.Workbook()
-        
+
         header_fill = PatternFill('solid', fgColor='34495E')
         header_font = Font(bold=True, color='FFFFFF')
-        
+
+        # 汇总 Sheet
         ws_summary = wb.active
         ws_summary.title = '统计汇总'
-        
+
         summary_data = [
             ['统计项', '数量'],
             ['总录入数', self.total_label.findChild(QLabel).text()],
@@ -303,109 +393,119 @@ class StatsPage(QWidget):
             ['已上传', self.uploaded_label.findChild(QLabel).text()],
             ['上传失败', self.failed_label.findChild(QLabel).text()]
         ]
-        
-        for i, row in enumerate(summary_data, 1):
-            for j, val in enumerate(row, 1):
+
+        for i, r in enumerate(summary_data, 1):
+            for j, val in enumerate(r, 1):
                 c = ws_summary.cell(i, j, val)
                 if i == 1:
                     c.font = header_font
                     c.fill = header_fill
                     c.alignment = Alignment(horizontal='center', vertical='center')
-        
+
         for col in ws_summary.columns:
             max_len = max(len(str(c.value or '')) for c in col)
             ws_summary.column_dimensions[col[0].column_letter].width = min(max_len + 4, 20)
-        
-        ws_batches = wb.create_sheet('批次统计')
-        batch_headers = ['批次ID', '批次名称', '模板', '记录数', '状态']
-        
-        for j, h in enumerate(batch_headers, 1):
-            c = ws_batches.cell(1, j, h)
+
+        # 树形展开 Sheet
+        ws_tree = wb.create_sheet('台账层级')
+        tree_headers = ['批次', '模板', '年度', '记录数']
+        for j, h in enumerate(tree_headers, 1):
+            c = ws_tree.cell(1, j, h)
             c.font = header_font
             c.fill = header_fill
             c.alignment = Alignment(horizontal='center', vertical='center')
-        
-        row_count = self.batch_table.rowCount()
-        for i in range(row_count):
-            for j in range(5):
-                item = self.batch_table.item(i, j)
-                ws_batches.cell(i + 2, j + 1, item.text() if item else '')
-        
-        for col in ws_batches.columns:
+
+        row = 2
+        root = self.stats_tree.invisibleRootItem()
+        for bi in range(root.childCount()):
+            batch_item = root.child(bi)
+            batch_name = batch_item.text(0)
+            for ti in range(batch_item.childCount()):
+                tmpl_item = batch_item.child(ti)
+                tmpl_name = tmpl_item.text(0)
+                for yi in range(tmpl_item.childCount()):
+                    year_item = tmpl_item.child(yi)
+                    ws_tree.cell(row, 1, batch_name)
+                    ws_tree.cell(row, 2, tmpl_name)
+                    ws_tree.cell(row, 3, year_item.text(0))
+                    ws_tree.cell(row, 4, int(year_item.text(2)))
+                    row += 1
+
+        for col in ws_tree.columns:
             max_len = max(len(str(c.value or '')) for c in col)
-            ws_batches.column_dimensions[col[0].column_letter].width = min(max_len + 4, 40)
-        
+            ws_tree.column_dimensions[col[0].column_letter].width = min(max_len + 4, 40)
+
         from core.record_manager import RecordManager
         from core.template_manager import TemplateManager
-        
+
         record_manager = RecordManager()
         template_manager = TemplateManager()
-        
+
         with get_cursor() as cursor:
             cursor.execute('SELECT id, name FROM batches')
-            batch_map = {row['id']: row['name'] for row in cursor.fetchall()}
-        
+            batch_map = {r['id']: r['name'] for r in cursor.fetchall()}
+
         all_records = record_manager.get_all_records()
-        
+
         if not all_records:
             wb.save(filename)
             QMessageBox.information(self, "成功", f"全部数据已导出到:\n{filename}")
             return
-        
+
         records_by_template = {}
         for record in all_records:
             template_name = record.get('template_name', '未知模板')
             if template_name not in records_by_template:
                 records_by_template[template_name] = []
             records_by_template[template_name].append(record)
-        
+
         for template_name, records in records_by_template.items():
             ws = wb.create_sheet(template_name[:31])
-            
+
             template_id = records[0].get('template_id')
             template = template_manager.get_template_by_id(template_id)
             field_defs = template.get('fields', []) if template else []
-            
+
             headers = ['批次名称', '审核状态', '上传状态', '录入时间']
             field_keys = [f['key'] for f in field_defs]
             field_names = [f['name'] for f in field_defs]
-            
+
             for name in field_names:
                 headers.append(name)
-            
+
             for j, h in enumerate(headers, 1):
                 c = ws.cell(1, j, h)
                 c.font = header_font
                 c.fill = header_fill
                 c.alignment = Alignment(horizontal='center', vertical='center')
-            
+
             for row_idx, record in enumerate(records, 2):
                 values = record.get('values', {})
-                
+
                 batch_id = record.get('batch_id', '')
                 ws.cell(row_idx, 1, batch_map.get(batch_id, batch_id))
-                
+
                 review_status = record.get('review_status', '')
                 review_text = {'pending': '待审核', 'reviewed': '已审核', 'uploaded': '已上传'}.get(review_status, review_status)
                 ws.cell(row_idx, 2, review_text)
-                
+
                 upload_status = record.get('upload_status', '')
                 upload_text = {'pending': '待上传', 'uploaded': '已上传', 'failed': '上传失败'}.get(upload_status, upload_status)
                 ws.cell(row_idx, 3, upload_text)
-                
+
                 created_at = record.get('created_at', '')
                 ws.cell(row_idx, 4, created_at[:19] if created_at else '')
-                
+
                 for col_idx, key in enumerate(field_keys, 5):
                     ws.cell(row_idx, col_idx, values.get(key, ''))
-            
+
             for col in ws.columns:
                 max_len = max(len(str(c.value or '')) for c in col)
                 ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 40)
-        
+
         if 'Sheet' in wb.sheetnames:
             wb.remove(wb['Sheet'])
-        
+
         wb.save(filename)
         QMessageBox.information(self, "成功", f"全部数据已导出到:\n{filename}")
 

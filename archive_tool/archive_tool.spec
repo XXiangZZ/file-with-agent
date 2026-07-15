@@ -30,7 +30,7 @@ a = Analysis(
     hookspath=['E:\\PythonProject\\code\\archive_tool\\build\\pyinstaller-hooks'],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=['torch', 'tensorflow', 'transformers', 'onnx', 'onnxruntime', 'torchvision', 'torchaudio'],
     noarchive=False,
     optimize=0,
 )
@@ -41,7 +41,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='archive_with_all',
+    name='archive_tool',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -60,5 +60,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='archive_with_all',
+    name='archive_tool',
 )

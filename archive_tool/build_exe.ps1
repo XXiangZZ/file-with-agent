@@ -4,6 +4,11 @@ param(
     [switch]$OneDir
 )
 $ErrorActionPreference = 'Stop'
+# 打包全程终端内容同时写入 build_debug.log（含所有 Write-Host、PyInstaller 输出、错误警告），
+# 便于出问题时排查构建过程。运行期 exe 的 stdout/stderr 重定向到同目录下的 debug.log（main.py 已实现）
+$BuildLogFile = Join-Path (Get-Location) 'build_debug.log'
+"$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ======== PyInstaller 打包启动 ========" | Out-File -FilePath $BuildLogFile -Encoding utf8 -Append
+Start-Transcript -Path $BuildLogFile -Append -ErrorAction SilentlyContinue
 # 参数：按需包含的模块（逗号分隔），以及输出可执行文件名
 # 可选：-OneDir 使用 dist/<BuildName>/ 目录式构建，否则默认生成单文件 exe
 $cwd = Get-Location
@@ -140,3 +145,5 @@ if ($OneDir) {
         Write-Host "Build finished. Check .\dist\ folder for artifacts and logs (build/pyinstaller*.log)."
     }
 }
+"$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ======== PyInstaller 打包结束 ========" | Out-File -FilePath $BuildLogFile -Encoding utf8 -Append
+Stop-Transcript -ErrorAction SilentlyContinue

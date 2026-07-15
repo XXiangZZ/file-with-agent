@@ -24,10 +24,17 @@ class RecordManager:
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ''', (batch_id, template_id, template_name, name, filing_type, layer, parent_id, year))
             record_id = cursor.lastrowid
-            
+
+            # 自动维护 batch_templates 关联表，确保目录树可以显示该 (批次, 模板, 年度) 节点
+            if batch_id and template_name and year is not None:
+                cursor.execute('''
+                    INSERT OR IGNORE INTO batch_templates (batch_id, template_name, year)
+                    VALUES (?, ?, ?)
+                ''', (batch_id, template_name, year))
+
             if data is not None:
                 self.save_record_values(record_id, data)
-            
+
             return record_id
 
     def _extract_year_from_data(self, data):
