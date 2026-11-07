@@ -16,6 +16,7 @@ class ModelService:
         if parsed.scheme == 'http' and parsed.hostname not in {'localhost', '127.0.0.1', '::1'}:
             raise ValueError('非本机模型地址必须使用 HTTPS')
         self.endpoint = endpoint
+        self.model_name = config.get('embedding_model', '')
 
     def post(self, route, payload):
         headers = {'Content-Type': 'application/json'}
@@ -55,6 +56,20 @@ class ModelService:
             'model': self.config['chat_model'], 'temperature': 0,
             'messages': messages, 'response_format': {'type': 'json_object'}})
         return output['choices'][0]['message']['content']
+
+    def check_claim_support(self, claim, evidence):
+        """Ask the configured model for a separate evidence-entailment judgment."""
+        output = self.post('/chat/completions', {
+            'model': self.config['chat_model'], 'temperature': 0,
+            'messages': [
+                {'role': 'system', 'content': '你是严格的证据蕴含校验器。仅判断证据是否直接支持陈述，不使用常识补足。'
+                 '返回 JSON：{"supported":true或false}。存在矛盾、缺少关键条件或仅主题相似时必须为 false。'},
+                {'role': 'user', 'content': json.dumps({'claim': claim, 'evidence': evidence}, ensure_ascii=False)}],
+            'response_format': {'type': 'json_object'}})
+        verdict = json.loads(output['choices'][0]['message']['content'])
+        if not isinstance(verdict.get('supported'), bool):
+            raise ValueError('证据支持校验结果无效')
+        return verdict['supported']
 
     def select_evidence(self, query, result):
         """The model may select verbatim quotes, never author unverified conclusions."""

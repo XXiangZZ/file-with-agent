@@ -58,14 +58,20 @@ class ArchiveRetriever(BaseRetriever):
     kinds: list[str] | None = None
 
     def _get_relevant_documents(self, query, *, run_manager):
-        docs = self.index.documents(self.scope, self.kinds)
+        persisted = self.index.vector_rows(self.scope, self.kinds) if self.embeddings is not None else []
+        docs = [doc for doc, _ in persisted] if persisted else self.index.documents(self.scope, self.kinds)
         if not docs or not query.strip():
             return []
         q = tokens(query, self.mode != 'keyword')
         vectors = None
         semantic = latent_scores(query, docs) if self.mode != 'keyword' else [0.] * len(docs)
         if self.embeddings is not None and self.mode != 'keyword':
-            vectors = self.embeddings.embed_documents([d.page_content for d in docs])
+            stored = {doc.metadata.get('id'): vector for doc, vector in persisted if vector is not None}
+            if len(stored) == len(docs):
+                vectors = [stored[d.metadata['id']] for d in docs]
+            else:
+                # A missing vector is an index lifecycle error; do not silently claim semantic retrieval.
+                raise ValueError('知识库缺少持久化向量，请先使用当前嵌入模型重建索引')
             query_vector = self.embeddings.embed_query(query)
             if len(query_vector) != len(vectors[0]):
                 raise ValueError('文档和问题嵌入维度不一致')

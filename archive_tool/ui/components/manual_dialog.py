@@ -153,9 +153,10 @@ class ManualDialog(QDialog):
         self.status.setText('正在解析手册；扫描资料的 OCR 可能较慢…')
         def task(progress):
             results = []
+            service = ModelService(self.config) if self.external.isChecked() and self.config.get('embedding_model') else None
             for path in paths:
                 try:
-                    message = self.index.import_file(path, '手册', SCOPE, progress)
+                    message = self.index.import_file(path, '手册', SCOPE, progress, embeddings=service)
                 except Exception as exc:
                     message = f'导入失败，原索引保留：{exc}'
                 results.append(f'{path}: {message}')

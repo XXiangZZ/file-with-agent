@@ -1,6 +1,6 @@
 from langchain_core.documents import Document
 from assistant.index import KnowledgeIndex
-from assistant.generation import ask, suggest
+from assistant.generation import ask, suggest, verify_grounded_answer
 from assistant.retrieval import ArchiveRetriever
 from assistant.services import ModelService
 import pytest
@@ -47,3 +47,32 @@ def test_model_selection_verifies_quote_and_unknown_id(monkeypatch):
     assert not service.select_evidence('题名', result)['citations']
     with pytest.raises(ValueError):
         ModelService({'base_url': 'http://example.com/v1'})
+
+
+def test_persisted_vectors_are_used_without_reembedding_documents(tmp_path):
+    class FakeEmbeddings:
+        model_name = 'local-test'
+        def embed_documents(self, texts):
+            return [[float(len(texts[i])), 1.0] for i in range(len(texts))]
+        def embed_query(self, text):
+            return [1.0, 1.0]
+
+    index = KnowledgeIndex(tmp_path / 'kb.db')
+    path = tmp_path / 'rule.txt'
+    path.write_text('文件题名：按原文著录。', encoding='utf-8')
+    embeddings = FakeEmbeddings()
+    index.import_file(path, embeddings=embeddings)
+    rows = index.vector_rows('通用')
+    assert rows and rows[0][1] == [11.0, 1.0]
+    docs = ArchiveRetriever(index=index, scope='通用', embeddings=embeddings).invoke('题名')
+    assert docs and docs[0].metadata['retrieval_score'] > 0
+
+
+def test_grounded_answer_requires_semantic_evidence():
+    citations = [{'id': 'a', 'quote': '题名应按原文著录，日期填写八位数字。', 'source': 'rule.txt', 'page': 1}]
+    raw = '{"answer":"题名按原文著录。", "claims":[{"text":"题名按原文著录。", "citation_ids":["a"]}]}'
+    result = verify_grounded_answer(raw, citations)
+    assert result['citations'][0]['id'] == 'a'
+    unsupported = '{"answer":"系统支持自动联网上传。", "claims":[{"text":"系统支持自动联网上传。", "citation_ids":["a"]}]}'
+    with pytest.raises(ValueError, match='支持校验'):
+        verify_grounded_answer(unsupported, citations)

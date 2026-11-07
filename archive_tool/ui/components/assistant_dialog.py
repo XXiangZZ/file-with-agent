@@ -127,9 +127,10 @@ class AssistantDialog(QDialog):
         kind, scope = self.kind.currentText(), self.scope.text().strip()
         def task(progress):
             results = []
+            service = ModelService(self.config) if self.external.isChecked() and self.config.get('embedding_model') else None
             for path in paths:
                 try:
-                    results.append(f'{path}: {self.index.import_file(path, kind, scope, progress)}')
+                    results.append(f'{path}: {self.index.import_file(path, kind, scope, progress, embeddings=service)}')
                 except Exception as exc:
                     results.append(f'{path}: 失败，原索引保留：{exc}')
             return '\n'.join(results)
@@ -151,9 +152,9 @@ class AssistantDialog(QDialog):
         def task(progress):
             try:
                 service = ModelService(self.config) if external else None
-                result = ask(self.index, query, scope, embeddings=service if service and self.config.get('embedding_model') else None)
-                if service and self.config.get('chat_model'):
-                    result = service.select_evidence(query, result)
+                result = ask(self.index, query, scope,
+                             embeddings=service if service and self.config.get('embedding_model') else None,
+                             service=service)
             except Exception:
                 if not external:
                     raise
@@ -164,7 +165,11 @@ class AssistantDialog(QDialog):
 
     @staticmethod
     def render_answer(result):
-        return result['answer'] + '\n\n' + '\n\n'.join(
+        claims = result.get('claims', [])
+        answer = result['answer']
+        if claims:
+            answer = '\n'.join(f"{claim['text']} [{', '.join(claim['citation_ids'])}]" for claim in claims)
+        return answer + '\n\n' + '\n\n'.join(
             f"来源：{c['source']} · 第 {c['page']} 页 · 字符 {c.get('start_index', 0)}\n{c['quote']}"
             for c in result['citations'])
 
