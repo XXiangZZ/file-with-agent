@@ -63,6 +63,8 @@ def verify_grounded_answer(raw, citations):
     claims = parsed.get('claims', [])
     if not isinstance(claims, list):
         raise ValueError('模型 claims 结构无效')
+    if not claims and not any(marker in parsed['answer'] for marker in ('证据不足', '无法确认', '没有足够证据')):
+        raise ValueError('答案包含未绑定引用的内容')
     by_id = {item['id']: item for item in citations}
     verified = []
     for claim in claims:

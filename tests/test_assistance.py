@@ -76,3 +76,5 @@ def test_grounded_answer_requires_semantic_evidence():
     unsupported = '{"answer":"系统支持自动联网上传。", "claims":[{"text":"系统支持自动联网上传。", "citation_ids":["a"]}]}'
     with pytest.raises(ValueError, match='支持校验'):
         verify_grounded_answer(unsupported, citations)
+    with pytest.raises(ValueError, match='未绑定引用'):
+        verify_grounded_answer('{"answer":"系统支持自动联网上传。", "claims":[]}', citations)
