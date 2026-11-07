@@ -55,9 +55,10 @@ class ArchiveRetriever(BaseRetriever):
     mode: str = 'hybrid'
     k: int = 4
     embeddings: Any = None
+    kinds: list[str] | None = None
 
     def _get_relevant_documents(self, query, *, run_manager):
-        docs = self.index.documents(self.scope)
+        docs = self.index.documents(self.scope, self.kinds)
         if not docs or not query.strip():
             return []
         q = tokens(query, self.mode != 'keyword')

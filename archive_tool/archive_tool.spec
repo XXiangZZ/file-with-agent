@@ -6,6 +6,10 @@ from PyInstaller.utils.hooks import copy_metadata
 datas = [('models', 'models'), ('resources', 'resources'), ('config/templates', 'config/templates'), ('ui', 'ui'), ('build', 'build'), ('E:\\PythonProject\\code\\archive_tool\\.venv\\Lib\\site-packages\\Cython\\Utility', 'Cython\\Utility')]
 binaries = [('E:\\PythonProject\\code\\archive_tool\\.venv\\Lib\\site-packages\\paddle\\libs', 'paddle/libs')]
 hiddenimports = ['paddleocr.paddleocr', 'paddle', 'tools', 'tools.program', 'tools.naive_sync_bn', 'imgaug', 'imageio']
+
+# Manual QA uses packaged guides and LangChain's runtime metadata.
+datas += copy_metadata('langchain-core')
+datas += copy_metadata('langchain-text-splitters')
 datas += copy_metadata('imageio')
 datas += copy_metadata('imgaug')
 hiddenimports += collect_submodules('ppocr')

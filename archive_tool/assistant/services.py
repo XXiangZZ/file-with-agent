@@ -46,6 +46,16 @@ class ModelService:
     def embed_query(self, text):
         return self.embed_documents([text])[0]
 
+    def complete_prompt(self, prompt):
+        """OpenAI-compatible model adapter for a LangChain ChatPromptValue."""
+        roles = {'system': 'system', 'human': 'user', 'ai': 'assistant'}
+        messages = [{'role': roles[message.type], 'content': message.content}
+                    for message in prompt.to_messages()]
+        output = self.post('/chat/completions', {
+            'model': self.config['chat_model'], 'temperature': 0,
+            'messages': messages, 'response_format': {'type': 'json_object'}})
+        return output['choices'][0]['message']['content']
+
     def select_evidence(self, query, result):
         """The model may select verbatim quotes, never author unverified conclusions."""
         citations = result['citations']

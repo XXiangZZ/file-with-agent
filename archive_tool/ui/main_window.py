@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QListWidget, QListWidgetItem, QStackedWidget,
     QLabel, QMessageBox, QGraphicsDropShadowEffect,
-    QStatusBar
+    QStatusBar, QPushButton
 )
 from PySide6.QtCore import Qt, QTimer, QSize, QDateTime
 from PySide6.QtGui import QColor
@@ -144,6 +144,10 @@ class MainWindow(QMainWindow):
         self.nav_list.currentRowChanged.connect(self._on_nav_changed)
 
         nav_layout.addWidget(self.nav_list)
+        self.manual_button = QPushButton("软件使用助手")
+        self.manual_button.setStyleSheet("background:#2563EB; color:white; padding:12px; margin:12px; border-radius:8px;")
+        self.manual_button.clicked.connect(self._open_manual_assistant)
+        nav_layout.addWidget(self.manual_button)
         nav_layout.addStretch()
 
         # ── 底部版本信息 ──
@@ -311,6 +315,13 @@ class MainWindow(QMainWindow):
     # =====================================================
     # 时钟
     # =====================================================
+    def _open_manual_assistant(self):
+        try:
+            from ui.components.manual_dialog import ManualDialog
+            ManualDialog(self).exec()
+        except ImportError as exc:
+            QMessageBox.warning(self, "助手依赖缺失", f"请安装 requirements-assistant.txt 后重试。\n{exc}")
+
     def _init_clock(self):
 
         self.clock_timer = QTimer(self)

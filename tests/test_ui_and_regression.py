@@ -109,6 +109,78 @@ def test_service_failure_falls_back_and_default_never_calls_service(app, tmp_pat
     dialog.reject()
 
 
+def test_manual_dialog_ready_query_and_explicit_model_opt_in(app, tmp_path, monkeypatch):
+    from ui.components import manual_dialog as ui
+    monkeypatch.setattr(ui, 'DATA_DIR', tmp_path)
+    monkeypatch.setattr(ui, 'load_config', lambda path: {
+        'base_url': 'http://localhost:11434/v1', 'chat_model': 'mock-only'})
+    calls = []
+    def unavailable(config):
+        calls.append(True)
+        raise RuntimeError('offline')
+    monkeypatch.setattr(ui, 'ModelService', unavailable)
+    dialog = ui.ManualDialog()
+    def wait_idle():
+        loop = QEventLoop()
+        def poll():
+            if dialog.worker and not dialog.worker.isRunning():
+                loop.quit()
+        timer = QTimer()
+        timer.timeout.connect(poll)
+        timer.start(10)
+        QTimer.singleShot(3000, loop.quit)
+        loop.exec()
+        timer.stop()
+        app.processEvents()
+    wait_idle()
+    assert dialog.ready and not dialog.external.isChecked()
+    dialog.question.setText('如何导入Excel？')
+    dialog.ask()
+    assert not dialog.ask_button.isEnabled()
+    wait_idle()
+    assert not calls
+    assert '出处：' in dialog.output.toPlainText()
+    assert 'Excel导入' in dialog.output.toPlainText()
+    assert '未调用生成模型' in dialog.status.text()
+    dialog.external.setChecked(True)
+    dialog.ask()
+    wait_idle()
+    assert calls and '退回本地' in dialog.output.toPlainText()
+    dialog.question.setText('软件自动联网同步怎么用')
+    dialog.external.setChecked(False)
+    dialog.ask()
+    wait_idle()
+    assert '证据不足' in dialog.output.toPlainText()
+    dialog.reject()
+
+
+def test_manual_button_available_in_main_window(app, tmp_path, monkeypatch):
+    from db import database
+    database.close_connection()
+    monkeypatch.setattr(database, 'DATABASE_PATH', tmp_path / 'archive.db')
+    database.init_database()
+    from core.template_manager import TemplateManager
+    TemplateManager().init_database_templates()
+    from ui.main_window import MainWindow
+    from ui.components import manual_dialog as ui
+    shown = []
+    class FakeDialog:
+        def __init__(self, parent):
+            self.parent = parent
+        def exec(self):
+            shown.append(self.parent)
+    monkeypatch.setattr(ui, 'ManualDialog', FakeDialog)
+    window = MainWindow()
+    window.nav_list.setCurrentRow(2)
+    window.manual_button.click()
+    assert shown == [window]
+    window.clock_timer.stop()
+    window.auto_cache_timer.stop()
+    monkeypatch.setattr(QMessageBox, 'question', lambda *args: QMessageBox.Yes)
+    window.close()
+    database.close_connection()
+
+
 def test_real_entry_page_and_confirmed_fill(app, tmp_path, monkeypatch):
     from db import database
     database.close_connection()

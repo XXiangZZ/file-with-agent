@@ -1,0 +1,11 @@
+[
+  {"id": "start", "question": "第一次用怎么开始？", "expected": "01_getting_started.md"},
+  {"id": "import", "question": "如何导入Excel？", "expected": "02_excel_import.md"},
+  {"id": "export", "question": "怎么导出当前批次？", "expected": "03_export.md"},
+  {"id": "draft", "question": "如何保存和恢复草稿？", "expected": "04_drafts.md"},
+  {"id": "validate", "question": "日期格式错误如何校验？", "expected": "05_validation.md"},
+  {"id": "ocr", "question": "扫描件识别怎么用？", "expected": "06_ocr.md"},
+  {"id": "search", "question": "如何查找档案？", "expected": "07_search.md"},
+  {"id": "no_answer", "question": "怎么设置自动联网同步？", "expected": null},
+  {"id": "unsupported", "question": "单点登录怎么设置？", "expected": null}
+]

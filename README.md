@@ -2,6 +2,54 @@
 
 在原 PySide6 桌面应用上增量扩展，原 SQLite 著录、JSON 字段模板、必填/日期格式校验、草稿和 Excel 导入导出流程继续使用。源码位于 `archive_tool/`；旧发布目录中的 EXE 不包含本次改动，需要从源码启动或另行重新打包。
 
+## 新增：软件使用助手
+
+启动源码版后，在左侧点击 **软件使用助手**。助手自动准备 7 篇随软件提供的操作指南，可以直接问“如何导入Excel？”“怎么导出当前批次？”“如何恢复草稿？”或选择常见问题。回答显示操作步骤、手册文件、页码和字符位置；没有依据时明确提示证据不足。此入口在各业务页面都可以打开。
+
+![软件使用助手的真实 Qt 界面，本地检索模式](evaluation/manual_demo.png)
+
+指南按当前源码的按钮和流程编写，覆盖录入、Excel 导入/导出、草稿、校验、OCR 和检索；不是第三方正式操作手册。例如实际导入功能按模板列名处理数据，没有列映射向导。可用“补充本软件操作手册”追加资料。为便于保守匹配，每个操作节应以操作名称开头并列出编号步骤；自由排版、没有标题和编号的手册可能被拒答，需要整理资料。
+
+操作手册使用独立的 `archive_tool/data/manual.sqlite3`，复用原知识库的解析、切分、本地索引、检索器和出处结构；不读取档案记录或字段值，不自动执行任何软件操作。工作线程处理索引和提问；处理中会禁用重复操作并阻止关闭。
+
+### LangChain、RAG 和 Agent 分别体现在哪里
+
+| 阶段 | 当前调用的框架组件 | 实际代码 |
+|---|---|---|
+| 文档与出处 | `langchain_core.documents.Document` | `assistant/parsing.py` |
+| 分段及字符位置 | `RecursiveCharacterTextSplitter` | `assistant/index.py` |
+| 词法与本地 LSA / 可选嵌入检索 | `BaseRetriever` 的子类 `ArchiveRetriever` | `assistant/retrieval.py` |
+| 操作手册检索链 | `RunnableLambda → ArchiveRetriever → local_answer` | `assistant/manual.py:ask_manual` |
+| 可选的检索增强模型回答 | `ChatPromptTemplate → 模型接口适配器 → 引用核验` | `assistant/manual.py`、`assistant/services.py:complete_prompt` |
+| 桌面入口 | 主窗口“软件使用助手” → `ManualDialog` → `ask_manual` | `ui/main_window.py`、`ui/components/manual_dialog.py` |
+
+默认模式完整执行检索和证据摘录，**没有调用大模型生成答案**。配置 `chat_model` 并在窗口明确勾选后，模型才接收问题和检索到的手册证据，选择并排列操作步骤；步骤必须逐字匹配引用原文，否则整体退回本地摘录。模型不自由编造操作。可选 `embedding_model` 接收该操作手册库的文本，不接收档案字段和档案原文。状态栏明确区分“本地手册检索与摘录”“模型辅助回答”和是否调用生成模型。
+
+因此可以描述为“基于 LangChain 的操作手册检索问答，支持可配置的受约束 RAG 模型链”。当前尚无模型选择工具、执行动作或自主规划，不应描述成已完成的操作 Agent。模型分支通过模拟接口验证，尚未接入真实服务评测；本地检索已经实际运行。
+
+```mermaid
+flowchart LR
+    A[操作指南] --> B[Document + 切分器]
+    B --> C[本地 SQLite 索引]
+    Q[用户操作问题] --> R[LangChain 检索器]
+    C --> R
+    R --> E[匹配操作章节与证据]
+    E --> L[默认：原文步骤与出处]
+    E --> M[配置并授权后：提示词与模型]
+    M --> V[逐字引用核验]
+    V --> O[显示步骤与出处]
+```
+
+手册专项验证命令：
+
+```powershell
+python -m pytest tests -q
+python evaluation/manual_eval.py
+python evaluation/manual_demo.py
+```
+
+本次共 **27 项测试通过**。手册专项问题集有 7 个可回答问题和 2 个无答案问题；两种检索的 Recall@1 / Recall@3 均为 1.0，无答案问题在两种模式下都拒答。数据量很小，题目和指南均由开发阶段编写，不能代表生产准确率，也没有证明混合检索优于基线。实际输出及逐字引用在 `evaluation/manual_results.json`，核对记录见 `evaluation/manual_review.md`。截图脚本仅在临时目录建索引，不接触档案数据库；截图使用 Windows 微软雅黑字体。
+
 ## 项目来源与贡献范围
 
 本仓库是 [XXiangZZ/file-with-agent](https://github.com/XXiangZZ/file-with-agent) 维护的独立增强版，基于共同开发项目 [wordsandideas/code](https://github.com/wordsandideas/code)，从原项目提交 `72be23b2d42fc35c989575233a9d27d3740c2849` 继续开发，并保留原有完整 Git 提交历史与作者署名。
@@ -88,6 +136,7 @@ python evaluation/check_ocr.py
 - `assistant/generation.py`：LangChain 检索→证据摘录链；明确标签的题名/日期/责任者提取，日期真实性及歧义检查，证据不足拒绝建议。
 - `assistant/services.py`：可选模型/嵌入接口、凭据环境变量、超时、逐字引用校验。
 - `assistant/form_fill.py` 与辅助窗口：后台处理、进度、失败提示、处理中防重复操作与关闭、默认未选建议、用户确认后仅回填空字段。
+- `assistant/manual.py` 与 `ui/components/manual_dialog.py`：内置操作指南、手册类型过滤、章节匹配、步骤出处、可选 LangChain 模型回答及失败回退；在主窗口提供各页面可见的“软件使用助手”入口。
 - `tests/`：索引、PDF/OCR 适配、范围、拒答、引用、歧义、真实录入页确认流程、后台状态、原校验与 Excel 导出回归。均使用临时测试数据库。
 
 自由文本中没有明确标签的复杂题名/落款不做自动推断。尚未支持任意问题的自然语言归纳、规范冲突裁决、扫描图中文字高亮定位、大型向量库或中途取消 OCR。单文件重建原子提交，整库重建不是一个大事务；单个失败会保留其旧索引。已有索引保留导入时快照，来源文件改变后需重新导入；不以旧文件位置冒充实时文件状态。

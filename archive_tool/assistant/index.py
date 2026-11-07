@@ -72,14 +72,16 @@ class KnowledgeIndex:
             db.execute('DELETE FROM chunks WHERE source=?', (path,))
             db.execute('DELETE FROM sources WHERE path=?', (path,))
 
-    def documents(self, scope):
+    def documents(self, scope, kinds=None):
         with self.connect() as db:
             stale = db.execute('SELECT COUNT(*) FROM sources WHERE version != ?', (VERSION,)).fetchone()[0]
             if stale:
                 raise ValueError('索引版本已失效，请重建索引')
             rows = db.execute('SELECT text,metadata FROM chunks').fetchall()
         docs = [Document(page_content=t, metadata=json.loads(m)) for t, m in rows]
-        return [d for d in docs if d.metadata['scope'] in {scope, '通用'} and d.metadata['kind'] != '样例']
+        return [d for d in docs if d.metadata['scope'] in {scope, '通用'}
+                and d.metadata['kind'] != '样例'
+                and (kinds is None or d.metadata['kind'] in kinds)]
 
     def rebuild(self, progress=lambda message: None):
         results = []
