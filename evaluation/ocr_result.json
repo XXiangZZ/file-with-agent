@@ -1,0 +1,43 @@
+{
+  "fixture": "synthetic rendered image, not a real archive scan",
+  "status": "success",
+  "text": "题名：关于示例培训安排的通知\n日期：2026年11月07日\n责任者：示例办公室",
+  "suggestions": [
+    {
+      "key": "title",
+      "name": "题名",
+      "value": "关于示例培训安排的通知",
+      "citation": {
+        "source": "D:\\软件归档\\archive_tool\\source\\evaluation\\fixtures\\sample_scan.png",
+        "page": 1,
+        "ocr": true,
+        "quote": "题名：关于示例培训安排的通知"
+      },
+      "warning": "OCR 原文可能有误，请对照扫描件核实"
+    },
+    {
+      "key": "date",
+      "name": "日期",
+      "value": "20261107",
+      "citation": {
+        "source": "D:\\软件归档\\archive_tool\\source\\evaluation\\fixtures\\sample_scan.png",
+        "page": 1,
+        "ocr": true,
+        "quote": "日期：2026年11月07日"
+      },
+      "warning": "OCR 原文可能有误，请对照扫描件核实"
+    },
+    {
+      "key": "author",
+      "name": "责任者",
+      "value": "示例办公室",
+      "citation": {
+        "source": "D:\\软件归档\\archive_tool\\source\\evaluation\\fixtures\\sample_scan.png",
+        "page": 1,
+        "ocr": true,
+        "quote": "责任者：示例办公室"
+      },
+      "warning": "OCR 原文可能有误，请对照扫描件核实"
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "base_url": "http://127.0.0.1:11434/v1",
+  "api_key_env": "ARCHIVE_MODEL_API_KEY",
+  "embedding_model": "",
+  "chat_model": ""
+}

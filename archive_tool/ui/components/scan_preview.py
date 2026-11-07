@@ -153,6 +153,7 @@ class ScanPreview(QWidget):
             self.load_files(paths)
 
     def load_files(self, paths: list):
+        self.source_paths = list(paths)
         self._pdf_doc = None
         self._pdf_pages.clear()
         self._current_page = 0

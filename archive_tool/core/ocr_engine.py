@@ -53,6 +53,11 @@ def patch_paddlex_path():
 # 找本地模型目录
 # ──────────────────────────────────────────────
 def get_model_dir():
+    configured = os.environ.get('ARCHIVE_OCR_MODEL_DIR')
+    if configured:
+        if not os.path.isdir(configured):
+            raise RuntimeError('ARCHIVE_OCR_MODEL_DIR 指向的目录不存在')
+        return configured
     exe_dir = os.path.dirname(sys.executable)
 
     if _is_frozen():
@@ -81,8 +86,10 @@ def get_model_dir():
 # OCR 引擎
 # ──────────────────────────────────────────────
 class OCREngine:
-    def __init__(self, use_gpu=False):
+    def __init__(self, use_gpu=False, allow_download=True, model_dir=None):
         self._ocr = None
+        self._allow_download = allow_download
+        self._model_dir_override = model_dir
         self._init_model(use_gpu)
 
     def _init_model(self, use_gpu):
@@ -91,7 +98,7 @@ class OCREngine:
         try:
             from paddleocr import PaddleOCR
 
-            model_dir = get_model_dir()
+            model_dir = self._model_dir_override or get_model_dir()
             det_dir = rec_dir = cls_dir = None
 
             if model_dir:
@@ -122,6 +129,8 @@ class OCREngine:
                         params.pop(key, None)
                     self._ocr = PaddleOCR(**params)
                 except Exception:
+                    if not self._allow_download:
+                        raise inst_e
                     try:
                         self._ocr = PaddleOCR(lang='ch', use_angle_cls=True)
                     except Exception:

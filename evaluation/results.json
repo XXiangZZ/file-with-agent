@@ -1,0 +1,712 @@
+{
+  "dataset": "7 synthetic questions, 6 answerable; no production-quality inference",
+  "semantic_method": "local TF-IDF/SVD LSA with synonym expansion; no pretrained embeddings",
+  "metrics": {
+    "keyword": {
+      "macro_recall@1": 0.8333333333333334,
+      "macro_recall@3": 1.0
+    },
+    "hybrid": {
+      "macro_recall@1": 0.8333333333333334,
+      "macro_recall@3": 1.0
+    }
+  },
+  "rows": [
+    {
+      "mode": "keyword",
+      "id": "normal",
+      "retrieved": [
+        [
+          "rules.txt",
+          1
+        ],
+        [
+          "rules.txt",
+          2
+        ],
+        [
+          "ocr_errors.txt",
+          1
+        ]
+      ],
+      "recall@1": 1.0,
+      "recall@3": 1.0,
+      "citation_text_verified": true,
+      "abstained": false,
+      "answer": {
+        "answer": "以下为相关规则的原文摘录；未写明的情况仍属证据不足，不据此推断。请核对适用性。",
+        "citations": [
+          {
+            "source": "D:\\软件归档\\archive_tool\\source\\evaluation\\fixtures\\rules.txt",
+            "page": 1,
+            "ocr": false,
+            "start_index": 0,
+            "id": "638efbd6eea1a9b8bce0",
+            "kind": "规范",
+            "scope": "文书",
+            "imported": "2026-11-07T07:37:38.597113+00:00",
+            "retrieval_score": 0.6135719910778963,
+            "quote": "文件题名：题名应照录文件标题，不得自行概括；无题名时应标记待人工核实。"
+          },
+          {
+            "source": "D:\\软件归档\\archive_tool\\source\\evaluation\\fixtures\\rules.txt",
+            "page": 1,
+            "ocr": false,
+            "start_index": 0,
+            "id": "638efbd6eea1a9b8bce0",
+            "kind": "规范",
+            "scope": "文书",
+            "imported": "2026-11-07T07:37:38.597113+00:00",
+            "retrieval_score": 0.6135719910778963,
+            "quote": "跨页题名处理：标题在下一页继续时，需核对下一页的续行。"
+          },
+          {
+            "source": "D:\\软件归档\\archive_tool\\source\\evaluation\\fixtures\\rules.txt",
+            "page": 2,
+            "ocr": false,
+            "start_index": 0,
+            "id": "bffc4b7a17ec81565264",
+            "kind": "规范",
+            "scope": "文书",
+            "imported": "2026-11-07T07:37:38.597113+00:00",
+            "retrieval_score": 0.5734623443633283,
+            "quote": "跨页题名处理续条：题名应完整保留副题名，不得遗漏续页文字。"
+          }
+        ]
+      }
+    },
+    {
+      "mode": "keyword",
+      "id": "paraphrase",
+      "retrieved": [
+        [
+          "rules.txt",
+          2
+        ]
+      ],
+      "recall@1": 1.0,
+      "recall@3": 1.0,
+      "citation_text_verified": true,
+      "abstained": false,
+      "answer": {
+        "answer": "以下为相关规则的原文摘录；未写明的情况仍属证据不足，不据此推断。请核对适用性。",
+        "citations": [
+          {
+            "source": "D:\\软件归档\\archive_tool\\source\\evaluation\\fixtures\\rules.txt",
+            "page": 2,
+            "ocr": false,
+            "start_index": 0,
+            "id": "bffc4b7a17ec81565264",
+            "kind": "规范",
+            "scope": "文书",
+            "imported": "2026-11-07T07:37:38.597113+00:00",
+            "retrieval_score": 0.1638463841038081,
+            "quote": "责任者：按原文署名的发文单位著录，不得用收文单位代替。"
+          }
+        ]
+      }
+    },
+    {
+      "mode": "keyword",
+      "id": "cross_page",
+      "retrieved": [
+        [
+          "rules.txt",
+          1
+        ],
+        [
+          "rules.txt",
+          2
+        ],
+        [
+          "manual.txt",
+          1
+        ]
+      ],
+      "recall@1": 0.5,
+      "recall@3": 1.0,
+      "citation_text_verified": true,
+      "abstained": false,
+      "answer": {
+        "answer": "以下为相关规则的原文摘录；未写明的情况仍属证据不足，不据此推断。请核对适用性。",
+        "citations": [
+          {
+            "source": "D:\\软件归档\\archive_tool\\source\\evaluation\\fixtures\\rules.txt",
+            "page": 1,
+            "ocr": false,
+            "start_index": 0,
+            "id": "638efbd6eea1a9b8bce0",
+            "kind": "规范",
+            "scope": "文书",
+            "imported": "2026-11-07T07:37:38.597113+00:00",
+            "retrieval_score": 0.5329480400990121,
+            "quote": "文件题名：题名应照录文件标题，不得自行概括；无题名时应标记待人工核实。"
+          },
+          {
+            "source": "D:\\软件归档\\archive_tool\\source\\evaluation\\fixtures\\rules.txt",
+            "page": 1,
+            "ocr": false,
+            "start_index": 0,
+            "id": "638efbd6eea1a9b8bce0",
+            "kind": "规范",
+            "scope": "文书",
+            "imported": "2026-11-07T07:37:38.597113+00:00",
+            "retrieval_score": 0.5329480400990121,
+            "quote": "跨页题名处理：标题在下一页继续时，需核对下一页的续行。"
+          },
+          {
+            "source": "D:\\软件归档\\archive_tool\\source\\evaluation\\fixtures\\rules.txt",
+            "page": 2,
+            "ocr": false,
+            "start_index": 0,
+            "id": "bffc4b7a17ec81565264",
+            "kind": "规范",
+            "scope": "文书",
+            "imported": "2026-11-07T07:37:38.597113+00:00",
+            "retrieval_score": 0.4378978809844386,
+            "quote": "跨页题名处理续条：题名应完整保留副题名，不得遗漏续页文字。"
+          }
+        ]
+      }
+    },
+    {
+      "mode": "keyword",
+      "id": "ocr_error",
+      "retrieved": [
+        [
+          "rules.txt",
+          2
+        ],
+        [
+          "ocr_errors.txt",
+          1
+        ],
+        [
+          "rules.txt",
+          1
+        ]
+      ],
+      "recall@1": 0.5,
+      "recall@3": 1.0,
+      "citation_text_verified": true,
+      "abstained": false,
+      "answer": {
+        "answer": "以下为相关规则的原文摘录；未写明的情况仍属证据不足，不据此推断。请核对适用性。",
+        "citations": [
+          {
+            "source": "D:\\软件归档\\archive_tool\\source\\evaluation\\fixtures\\rules.txt",
+            "page": 2,
+            "ocr": false,
+            "start_index": 0,
+            "id": "bffc4b7a17ec81565264",
+            "kind": "规范",
+            "scope": "文书",
+            "imported": "2026-11-07T07:37:38.597113+00:00",
+            "retrieval_score": 0.5016750465679883,
+            "quote": "文件日期：按原文形成日期著录，格式为YYYYMMDD；日期缺失时不得猜测。"
+          },
+          {
+            "source": "D:\\软件归档\\archive_tool\\source\\evaluation\\fixtures\\ocr_errors.txt",
+            "page": 1,
+            "ocr": false,
+            "start_index": 0,
+            "id": "89ffeeafe4e18a45c2a6",
+            "kind": "规范",
+            "scope": "文书",
+            "imported": "2026-11-07T07:37:38.587125+00:00",
+            "retrieval_score": 0.3853373177942262,
+            "quote": "文件日其：按原文形成日其填写，缺失时不得推测。"
+          }
+        ]
+      }
+    },
+    {
+      "mode": "keyword",
+      "id": "no_answer",
+      "retrieved": [
+        [
+          "rules.txt",
+          1
+        ]
+      ],
+      "citation_text_verified": true,
+      "abstained": true,
+      "answer": {
+        "answer": "证据不足，未找到可支持答案的规范，请补充资料或缩小问题范围。",
+        "citations": []
+      }
+    },
+    {
+      "mode": "keyword",
+      "id": "wrong_scope",
+      "retrieved": [
+        [
+          "rules.txt",
+          1
+        ],
+        [
+          "rules.txt",
+          2
+        ]
+      ],
+      "recall@1": 1.0,
+      "recall@3": 1.0,
+      "citation_text_verified": true,
+      "abstained": false,
+      "answer": {
+        "answer": "以下为相关规则的原文摘录；未写明的情况仍属证据不足，不据此推断。请核对适用性。",
+        "citations": [
+          {
+            "source": "D:\\软件归档\\archive_tool\\source\\evaluation\\fixtures\\rules.txt",
+            "page": 1,
+            "ocr": false,
+            "start_index": 0,
+            "id": "638efbd6eea1a9b8bce0",
+            "kind": "规范",
+            "scope": "文书",
+            "imported": "2026-11-07T07:37:38.597113+00:00",
+            "retrieval_score": 0.3403485038492136,
+            "quote": "文件题名：题名应照录文件标题，不得自行概括；无题名时应标记待人工核实。"
+          },
+          {
+            "source": "D:\\软件归档\\archive_tool\\source\\evaluation\\fixtures\\rules.txt",
+            "page": 1,
+            "ocr": false,
+            "start_index": 0,
+            "id": "638efbd6eea1a9b8bce0",
+            "kind": "规范",
+            "scope": "文书",
+            "imported": "2026-11-07T07:37:38.597113+00:00",
+            "retrieval_score": 0.3403485038492136,
+            "quote": "跨页题名处理：标题在下一页继续时，需核对下一页的续行。"
+          },
+          {
+            "source": "D:\\软件归档\\archive_tool\\source\\evaluation\\fixtures\\rules.txt",
+            "page": 2,
+            "ocr": false,
+            "start_index": 0,
+            "id": "bffc4b7a17ec81565264",
+            "kind": "规范",
+            "scope": "文书",
+            "imported": "2026-11-07T07:37:38.597113+00:00",
+            "retrieval_score": 0.27265686423952984,
+            "quote": "跨页题名处理续条：题名应完整保留副题名，不得遗漏续页文字。"
+          }
+        ]
+      }
+    },
+    {
+      "mode": "keyword",
+      "id": "manual",
+      "retrieved": [
+        [
+          "manual.txt",
+          1
+        ],
+        [
+          "ocr_errors.txt",
+          1
+        ]
+      ],
+      "recall@1": 1.0,
+      "recall@3": 1.0,
+      "citation_text_verified": true,
+      "abstained": false,
+      "answer": {
+        "answer": "以下为相关规则的原文摘录；未写明的情况仍属证据不足，不据此推断。请核对适用性。",
+        "citations": [
+          {
+            "source": "D:\\软件归档\\archive_tool\\source\\evaluation\\fixtures\\manual.txt",
+            "page": 1,
+            "ocr": false,
+            "start_index": 0,
+            "id": "b14ba3e1ddfcdb151662",
+            "kind": "手册",
+            "scope": "文书",
+            "imported": "2026-11-07T07:37:38.577025+00:00",
+            "retrieval_score": 0.39056673294247163,
+            "quote": "导出：选择批次后点击导出，Excel按照模板生成对应字段。"
+          }
+        ]
+      }
+    },
+    {
+      "mode": "hybrid",
+      "id": "normal",
+      "retrieved": [
+        [
+          "rules.txt",
+          1
+        ],
+        [
+          "rules.txt",
+          2
+        ],
+        [
+          "ocr_errors.txt",
+          1
+        ]
+      ],
+      "recall@1": 1.0,
+      "recall@3": 1.0,
+      "citation_text_verified": true,
+      "abstained": false,
+      "answer": {
+        "answer": "以下为相关规则的原文摘录；未写明的情况仍属证据不足，不据此推断。请核对适用性。",
+        "citations": [
+          {
+            "source": "D:\\软件归档\\archive_tool\\source\\evaluation\\fixtures\\rules.txt",
+            "page": 1,
+            "ocr": false,
+            "start_index": 0,
+            "id": "638efbd6eea1a9b8bce0",
+            "kind": "规范",
+            "scope": "文书",
+            "imported": "2026-11-07T07:37:38.597113+00:00",
+            "retrieval_score": 0.7685368724213342,
+            "quote": "文件题名：题名应照录文件标题，不得自行概括；无题名时应标记待人工核实。"
+          },
+          {
+            "source": "D:\\软件归档\\archive_tool\\source\\evaluation\\fixtures\\rules.txt",
+            "page": 1,
+            "ocr": false,
+            "start_index": 0,
+            "id": "638efbd6eea1a9b8bce0",
+            "kind": "规范",
+            "scope": "文书",
+            "imported": "2026-11-07T07:37:38.597113+00:00",
+            "retrieval_score": 0.7685368724213342,
+            "quote": "跨页题名处理：标题在下一页继续时，需核对下一页的续行。"
+          },
+          {
+            "source": "D:\\软件归档\\archive_tool\\source\\evaluation\\fixtures\\rules.txt",
+            "page": 2,
+            "ocr": false,
+            "start_index": 0,
+            "id": "bffc4b7a17ec81565264",
+            "kind": "规范",
+            "scope": "文书",
+            "imported": "2026-11-07T07:37:38.597113+00:00",
+            "retrieval_score": 0.6135398959127404,
+            "quote": "跨页题名处理续条：题名应完整保留副题名，不得遗漏续页文字。"
+          }
+        ]
+      }
+    },
+    {
+      "mode": "hybrid",
+      "id": "paraphrase",
+      "retrieved": [
+        [
+          "rules.txt",
+          2
+        ],
+        [
+          "rules.txt",
+          1
+        ],
+        [
+          "ocr_errors.txt",
+          1
+        ]
+      ],
+      "recall@1": 1.0,
+      "recall@3": 1.0,
+      "citation_text_verified": true,
+      "abstained": false,
+      "answer": {
+        "answer": "以下为相关规则的原文摘录；未写明的情况仍属证据不足，不据此推断。请核对适用性。",
+        "citations": [
+          {
+            "source": "D:\\软件归档\\archive_tool\\source\\evaluation\\fixtures\\rules.txt",
+            "page": 2,
+            "ocr": false,
+            "start_index": 0,
+            "id": "bffc4b7a17ec81565264",
+            "kind": "规范",
+            "scope": "文书",
+            "imported": "2026-11-07T07:37:38.597113+00:00",
+            "retrieval_score": 0.5748448522563295,
+            "quote": "责任者：按原文署名的发文单位著录，不得用收文单位代替。"
+          }
+        ]
+      }
+    },
+    {
+      "mode": "hybrid",
+      "id": "cross_page",
+      "retrieved": [
+        [
+          "rules.txt",
+          1
+        ],
+        [
+          "rules.txt",
+          2
+        ],
+        [
+          "manual.txt",
+          1
+        ]
+      ],
+      "recall@1": 0.5,
+      "recall@3": 1.0,
+      "citation_text_verified": true,
+      "abstained": false,
+      "answer": {
+        "answer": "以下为相关规则的原文摘录；未写明的情况仍属证据不足，不据此推断。请核对适用性。",
+        "citations": [
+          {
+            "source": "D:\\软件归档\\archive_tool\\source\\evaluation\\fixtures\\rules.txt",
+            "page": 1,
+            "ocr": false,
+            "start_index": 0,
+            "id": "638efbd6eea1a9b8bce0",
+            "kind": "规范",
+            "scope": "文书",
+            "imported": "2026-11-07T07:37:38.597113+00:00",
+            "retrieval_score": 0.7223602224770362,
+            "quote": "文件题名：题名应照录文件标题，不得自行概括；无题名时应标记待人工核实。"
+          },
+          {
+            "source": "D:\\软件归档\\archive_tool\\source\\evaluation\\fixtures\\rules.txt",
+            "page": 1,
+            "ocr": false,
+            "start_index": 0,
+            "id": "638efbd6eea1a9b8bce0",
+            "kind": "规范",
+            "scope": "文书",
+            "imported": "2026-11-07T07:37:38.597113+00:00",
+            "retrieval_score": 0.7223602224770362,
+            "quote": "跨页题名处理：标题在下一页继续时，需核对下一页的续行。"
+          },
+          {
+            "source": "D:\\软件归档\\archive_tool\\source\\evaluation\\fixtures\\rules.txt",
+            "page": 2,
+            "ocr": false,
+            "start_index": 0,
+            "id": "bffc4b7a17ec81565264",
+            "kind": "规范",
+            "scope": "文书",
+            "imported": "2026-11-07T07:37:38.597113+00:00",
+            "retrieval_score": 0.5827100687121944,
+            "quote": "跨页题名处理续条：题名应完整保留副题名，不得遗漏续页文字。"
+          }
+        ]
+      }
+    },
+    {
+      "mode": "hybrid",
+      "id": "ocr_error",
+      "retrieved": [
+        [
+          "ocr_errors.txt",
+          1
+        ],
+        [
+          "rules.txt",
+          2
+        ],
+        [
+          "rules.txt",
+          1
+        ]
+      ],
+      "recall@1": 0.5,
+      "recall@3": 1.0,
+      "citation_text_verified": true,
+      "abstained": false,
+      "answer": {
+        "answer": "以下为相关规则的原文摘录；未写明的情况仍属证据不足，不据此推断。请核对适用性。",
+        "citations": [
+          {
+            "source": "D:\\软件归档\\archive_tool\\source\\evaluation\\fixtures\\ocr_errors.txt",
+            "page": 1,
+            "ocr": false,
+            "start_index": 0,
+            "id": "89ffeeafe4e18a45c2a6",
+            "kind": "规范",
+            "scope": "文书",
+            "imported": "2026-11-07T07:37:38.587125+00:00",
+            "retrieval_score": 0.6580648365405511,
+            "quote": "文件日其：按原文形成日其填写，缺失时不得推测。"
+          },
+          {
+            "source": "D:\\软件归档\\archive_tool\\source\\evaluation\\fixtures\\rules.txt",
+            "page": 2,
+            "ocr": false,
+            "start_index": 0,
+            "id": "bffc4b7a17ec81565264",
+            "kind": "规范",
+            "scope": "文书",
+            "imported": "2026-11-07T07:37:38.597113+00:00",
+            "retrieval_score": 0.5647079644586923,
+            "quote": "文件日期：按原文形成日期著录，格式为YYYYMMDD；日期缺失时不得猜测。"
+          }
+        ]
+      }
+    },
+    {
+      "mode": "hybrid",
+      "id": "no_answer",
+      "retrieved": [
+        [
+          "rules.txt",
+          1
+        ],
+        [
+          "rules.txt",
+          2
+        ]
+      ],
+      "citation_text_verified": true,
+      "abstained": true,
+      "answer": {
+        "answer": "证据不足，未找到可支持答案的规范，请补充资料或缩小问题范围。",
+        "citations": []
+      }
+    },
+    {
+      "mode": "hybrid",
+      "id": "wrong_scope",
+      "retrieved": [
+        [
+          "rules.txt",
+          1
+        ],
+        [
+          "rules.txt",
+          2
+        ]
+      ],
+      "recall@1": 1.0,
+      "recall@3": 1.0,
+      "citation_text_verified": true,
+      "abstained": false,
+      "answer": {
+        "answer": "以下为相关规则的原文摘录；未写明的情况仍属证据不足，不据此推断。请核对适用性。",
+        "citations": [
+          {
+            "source": "D:\\软件归档\\archive_tool\\source\\evaluation\\fixtures\\rules.txt",
+            "page": 1,
+            "ocr": false,
+            "start_index": 0,
+            "id": "638efbd6eea1a9b8bce0",
+            "kind": "规范",
+            "scope": "文书",
+            "imported": "2026-11-07T07:37:38.597113+00:00",
+            "retrieval_score": 0.58889531292602,
+            "quote": "文件题名：题名应照录文件标题，不得自行概括；无题名时应标记待人工核实。"
+          },
+          {
+            "source": "D:\\软件归档\\archive_tool\\source\\evaluation\\fixtures\\rules.txt",
+            "page": 1,
+            "ocr": false,
+            "start_index": 0,
+            "id": "638efbd6eea1a9b8bce0",
+            "kind": "规范",
+            "scope": "文书",
+            "imported": "2026-11-07T07:37:38.597113+00:00",
+            "retrieval_score": 0.58889531292602,
+            "quote": "跨页题名处理：标题在下一页继续时，需核对下一页的续行。"
+          },
+          {
+            "source": "D:\\软件归档\\archive_tool\\source\\evaluation\\fixtures\\rules.txt",
+            "page": 2,
+            "ocr": false,
+            "start_index": 0,
+            "id": "bffc4b7a17ec81565264",
+            "kind": "规范",
+            "scope": "文书",
+            "imported": "2026-11-07T07:37:38.597113+00:00",
+            "retrieval_score": 0.45272550620411894,
+            "quote": "跨页题名处理续条：题名应完整保留副题名，不得遗漏续页文字。"
+          }
+        ]
+      }
+    },
+    {
+      "mode": "hybrid",
+      "id": "manual",
+      "retrieved": [
+        [
+          "manual.txt",
+          1
+        ],
+        [
+          "ocr_errors.txt",
+          1
+        ],
+        [
+          "rules.txt",
+          2
+        ]
+      ],
+      "recall@1": 1.0,
+      "recall@3": 1.0,
+      "citation_text_verified": true,
+      "abstained": false,
+      "answer": {
+        "answer": "以下为相关规则的原文摘录；未写明的情况仍属证据不足，不据此推断。请核对适用性。",
+        "citations": [
+          {
+            "source": "D:\\软件归档\\archive_tool\\source\\evaluation\\fixtures\\manual.txt",
+            "page": 1,
+            "ocr": false,
+            "start_index": 0,
+            "id": "b14ba3e1ddfcdb151662",
+            "kind": "手册",
+            "scope": "文书",
+            "imported": "2026-11-07T07:37:38.577025+00:00",
+            "retrieval_score": 0.5921890051032132,
+            "quote": "导出：选择批次后点击导出，Excel按照模板生成对应字段。"
+          }
+        ]
+      }
+    }
+  ],
+  "suggestions": [
+    {
+      "key": "title",
+      "name": "题名",
+      "value": "关于示例培训安排的通知",
+      "citation": {
+        "source": "D:\\软件归档\\archive_tool\\source\\evaluation\\fixtures\\sample.txt",
+        "page": 1,
+        "ocr": false,
+        "quote": "题名：关于示例培训安排的通知"
+      },
+      "warning": ""
+    },
+    {
+      "key": "date",
+      "name": "日期",
+      "value": "20261107",
+      "citation": {
+        "source": "D:\\软件归档\\archive_tool\\source\\evaluation\\fixtures\\sample.txt",
+        "page": 1,
+        "ocr": false,
+        "quote": "日期：2026年11月07日"
+      },
+      "warning": ""
+    },
+    {
+      "key": "author",
+      "name": "责任者",
+      "value": "示例办公室",
+      "citation": {
+        "source": "D:\\软件归档\\archive_tool\\source\\evaluation\\fixtures\\sample.txt",
+        "page": 1,
+        "ocr": false,
+        "quote": "责任者：示例办公室"
+      },
+      "warning": ""
+    }
+  ],
+  "limits": [
+    "Recall uses expected source/page and macro averages answerable questions only.",
+    "Citation substring checks prove provenance, not semantic support. See human_review.md.",
+    "OCR errors are injected text, not measured OCR accuracy.",
+    "External chat/embedding services not evaluated."
+  ]
+}

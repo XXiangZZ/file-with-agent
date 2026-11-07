@@ -1,0 +1,9 @@
+[
+  {"id":"normal", "question":"文件题名如何填写", "expected":[["rules.txt",1]]},
+  {"id":"paraphrase", "question":"落款单位如何填写", "expected":[["rules.txt",2]]},
+  {"id":"cross_page", "question":"跨页题名和副题名如何处理", "expected":[["rules.txt",1],["rules.txt",2]]},
+  {"id":"ocr_error", "question":"文件日期缺失如何填写", "expected":[["rules.txt",2],["ocr_errors.txt",1]]},
+  {"id":"no_answer", "question":"档案密级如何确定", "expected":[]},
+  {"id":"wrong_scope", "question":"题名是否使用买卖双方名称", "expected":[["rules.txt",1]]},
+  {"id":"manual", "question":"导出如何操作", "expected":[["manual.txt",1]]}
+]

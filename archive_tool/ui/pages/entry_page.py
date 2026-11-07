@@ -784,10 +784,21 @@ class EntryPage(QWidget):
         row2_layout.addWidget(self.validate_btn)
         row2_layout.addWidget(self.import_btn)
 
+        assistant_btn = QPushButton("查规范 / 字段建议")
+        assistant_btn.clicked.connect(self._open_assistant)
+        row2_layout.addWidget(assistant_btn)
+
         main_layout.addLayout(row1_layout)
         main_layout.addLayout(row2_layout)
         
         return toolbar
+
+    def _open_assistant(self):
+        try:
+            from ui.components.assistant_dialog import AssistantDialog
+            AssistantDialog(self).exec()
+        except ImportError as exc:
+            QMessageBox.warning(self, "智能辅助依赖缺失", f"请安装 requirements-assistant.txt 后重试。\n{exc}")
 
     def _init_template_combo(self):
         templates = self.template_manager.get_all_templates()

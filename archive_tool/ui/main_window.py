@@ -38,7 +38,7 @@ class MainWindow(QMainWindow):
     # =====================================================
     def _init_ui(self):
 
-        self.setWindowTitle("档案著录工序桌面工具")
+        self.setWindowTitle("档案著录智能辅助工作台")
 
         # 窗口铺满屏幕
         from PySide6.QtGui import QScreen
@@ -84,7 +84,7 @@ class MainWindow(QMainWindow):
         logo_icon.setStyleSheet("font-size: 28px; color: #93C5FD; background: transparent;")
         logo_layout.addWidget(logo_icon)
 
-        logo_title = QLabel("档案著录系统")
+        logo_title = QLabel("著录智能辅助工作台")
         logo_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         logo_title.setStyleSheet("""
             color: #F1F5F9; font-size: 15px; font-weight: 700;
