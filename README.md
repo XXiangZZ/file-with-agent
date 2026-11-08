@@ -101,13 +101,21 @@ PDF 逐页提取文本，无文本页才 OCR。图片支持 PNG/JPEG/BMP/TIFF（
 
 ## 可选模型与嵌入服务
 
-复制 `archive_tool/config/assistant.example.json` 为同目录 `assistant.local.json`。配置 OpenAI 兼容的 `/embeddings` 和 `/chat/completions` 服务地址及实际模型名；密钥仅从 `api_key_env` 指定的环境变量读取，本地配置已加入忽略规则。非本机端点要求 HTTPS。
+复制 `archive_tool/config/assistant.example.json` 为同目录 `assistant.local.json`。聊天与嵌入可以使用不同的 OpenAI-compatible 服务地址和模型名；Ollama 可通过 `http://127.0.0.1:11434/v1` 接入。配置文件只填写密钥环境变量的名称，密钥本身由 `ARCHIVE_CHAT_API_KEY` / `ARCHIVE_EMBEDDING_API_KEY` 或配置中的环境变量名读取。`ARCHIVE_CHAT_BASE_URL`、`ARCHIVE_CHAT_MODEL`、`ARCHIVE_EMBEDDING_BASE_URL`、`ARCHIVE_EMBEDDING_MODEL` 和 `ARCHIVE_MODEL_TIMEOUT` 可覆盖本地文件配置。示例文件中的模型名为空，默认不发起请求；本地配置已加入忽略规则。非本机端点要求 HTTPS。
 
 默认不调用任何模型服务。辅助窗口显示服务目标；每次打开窗口均需重新勾选允许发送。允许时发送的是问题及所选范围的知识库文本（嵌入会发送该范围全部规范/手册片段），不发送字段建议使用的档案原文。LangSmith 自动追踪在问答链调用内明确关闭。请不要将未脱敏档案作为规范导入后再授权外部服务。
 
 未配置时：中文字符关键词余弦为基线；混合检索使用同义词扩展、字符/二元组 TF-IDF 与本地 SVD 潜在语义分析（LSA）加权组合。它不是预训练中文语义模型，不能承诺复杂语义理解。索引文本和元数据保存在本地 SQLite；LSA 在查询时基于当前语料重新计算，适合小型资料库，大库尚未优化。
 
-配置嵌入模型并勾选后：远端嵌入相似度与词法得分组合。配置生成模型后：模型只能选择原文摘录；返回的片段 id 和逐字引用须匹配检索证据，不展示模型自由生成的结论。语义适用性仍需人工核查。模型超时或不可用时提示并退回本地检索摘录。当前未使用真实外部服务验证质量或兼容性。
+配置嵌入模型并勾选后：导入时保存分块向量，查询时将向量得分与词法得分组合。配置生成模型后：模型只能选择原文摘录；返回的片段 id 和逐字引用须匹配检索证据，不展示模型自由生成的结论。语义适用性仍需人工核查。模型超时、不可用或嵌入失败时退回本地检索摘录；导入失败时原索引保留，界面会尝试仅用本地索引导入。当前未使用真实外部服务验证质量或兼容性。
+
+配置聊天和嵌入模型后，可用脱敏合成手册运行显式冒烟验收；此命令会向配置服务发送合成文本和问题：
+
+```powershell
+python evaluation/real_model_smoke.py --allow-model-calls
+```
+
+脚本验证导入、持久化向量、混合检索、聊天生成及引用原文匹配。若未配置模型，可省略授权参数确认脚本不会请求服务；pytest 中的完整链路测试使用 mock，不代表真实模型效果。
 
 ## 测试和评测
 

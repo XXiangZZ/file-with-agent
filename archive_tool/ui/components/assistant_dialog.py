@@ -63,7 +63,9 @@ class AssistantDialog(QDialog):
         layout.addWidget(self.service_label)
         try:
             self.config = load_config(BASE_DIR / 'config' / 'assistant.local.json')
-            self.service_label.setText('服务目标：' + self.config.get('base_url', '未配置；使用本地检索与摘录'))
+            chat_url = self.config.get('chat_base_url', self.config.get('base_url', '未配置'))
+            embedding_url = self.config.get('embedding_base_url', self.config.get('base_url', '未配置'))
+            self.service_label.setText(f'聊天服务：{chat_url}；嵌入服务：{embedding_url}')
         except Exception:
             self.config = {}
             self.service_label.setText('服务配置无法读取；使用本地模式')
@@ -132,6 +134,13 @@ class AssistantDialog(QDialog):
                 try:
                     results.append(f'{path}: {self.index.import_file(path, kind, scope, progress, embeddings=service)}')
                 except Exception as exc:
+                    if service:
+                        try:
+                            local_result = self.index.import_file(path, kind, scope, progress)
+                            results.append(f'{path}: 嵌入失败，已回退本地索引：{local_result}')
+                            continue
+                        except Exception:
+                            pass
                     results.append(f'{path}: 失败，原索引保留：{exc}')
             return '\n'.join(results)
         self.start(task, self.output.setPlainText)

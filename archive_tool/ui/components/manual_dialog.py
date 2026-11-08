@@ -50,7 +50,8 @@ class ManualDialog(QDialog):
             self.config = load_config(BASE_DIR / 'config' / 'assistant.local.json')
             available = bool(self.config.get('chat_model') or self.config.get('embedding_model'))
             self.external.setEnabled(available)
-            self.service_label.setText('服务目标：' + self.config.get('base_url', '未配置') +
+            endpoint = self.config.get('chat_base_url', self.config.get('base_url', '未配置'))
+            self.service_label.setText('聊天服务目标：' + endpoint +
                 ('；勾选后才调用，档案字段和档案原文不发送。' if available else
                  '。当前使用本地手册检索；配置模型后可使用模型辅助回答。'))
         except Exception:

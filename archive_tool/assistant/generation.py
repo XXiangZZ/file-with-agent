@@ -106,15 +106,24 @@ def grounded_answer(query, docs, service):
 
 
 def ask(index, query, scope='通用', mode='hybrid', embeddings=None, service=None):
-    retriever = ArchiveRetriever(index=index, scope=scope, mode=mode, embeddings=embeddings)
-    # Both retrieval and answer assembly execute as actual LangChain chain stages.
-    chain = retriever | RunnableLambda(lambda docs: grounded_answer(query, docs, service)
-                                       if service and service.config.get('chat_model')
-                                       else evidence_answer(query, docs))
+    def make_chain(active_embeddings, active_service):
+        retriever = ArchiveRetriever(index=index, scope=scope, mode=mode,
+                                     embeddings=active_embeddings)
+        return retriever | RunnableLambda(lambda docs: grounded_answer(query, docs, active_service)
+            if active_service and active_service.config.get('chat_model')
+            else evidence_answer(query, docs))
+
     from langsmith import tracing_context
     # Even a developer's tracing environment must not upload archive-related content.
     with tracing_context(enabled=False):
-        result = chain.invoke(query)
+        try:
+            result = make_chain(embeddings, service).invoke(query)
+        except Exception:
+            if not embeddings and not service:
+                raise
+            result = make_chain(None, None).invoke(query)
+            result['notice'] = '模型或嵌入服务不可用，已退回本地证据检索。'
+            result['model_used'] = False
         result.setdefault('model_used', bool(service and service.config.get('chat_model')))
         result.setdefault('mode', '本地证据检索与摘录')
         result.setdefault('retrieved', 0)
