@@ -9,6 +9,7 @@ from assistant.index import KnowledgeIndex
 from assistant.parsing import Parser
 from assistant.generation import ask, suggest
 from assistant.services import ModelService, load_config
+from assistant.feedback_ui import FeedbackControls
 
 
 class Work(QThread):
@@ -88,6 +89,8 @@ class AssistantDialog(QDialog):
         layout.addLayout(row)
         self.status = QLabel('就绪；样例资料不作为规范问答依据')
         layout.addWidget(self.status)
+        self.feedback = FeedbackControls(self.index, self.status.setText)
+        layout.addWidget(self.feedback)
         self.refresh()
 
     def button(self, row, title, callback):
@@ -98,8 +101,14 @@ class AssistantDialog(QDialog):
 
     def refresh(self):
         self.sources.clear()
+        expected_model = None
+        if self.config.get('embedding_model'):
+            endpoint = self.config.get('embedding_base_url', self.config.get('base_url', ''))
+            expected_model = f'{endpoint.rstrip("/")}#{self.config["embedding_model"]}'
         for row in self.index.sources():
-            item = QListWidgetItem(f"[{row['kind']} / {row['scope']}] {row['path']} · {row['imported']}")
+            vector_state = self.index.vector_state(row['path'], expected_model)['state']
+            state_label = {'ready': '向量就绪', 'missing': '未生成向量', 'invalid': '向量失效'}[vector_state]
+            item = QListWidgetItem(f"[{row['kind']} / {row['scope']}] {row['path']} · {state_label} · {row['imported']}")
             item.setData(Qt.UserRole, row['path'])
             self.sources.addItem(item)
 
@@ -108,6 +117,7 @@ class AssistantDialog(QDialog):
             return
         for widget in self.controls + [self.scope, self.kind, self.external, self.question]:
             widget.setEnabled(False)
+        self.feedback.setEnabled(False)
         self.status.setText('处理中；OCR 初始化及扫描识别可能较慢，请等待。')
         self.worker = Work(task, self)
         self.worker.progress.connect(self.status.setText)
@@ -120,6 +130,7 @@ class AssistantDialog(QDialog):
         for widget in self.controls + [self.scope, self.kind, self.external, self.question]:
             widget.setEnabled(True)
         self.status.setText('处理结束；请核对结果和出处')
+        self.feedback.setEnabled(self.feedback.has_context)
         self.refresh()
 
     def import_files(self):
@@ -152,7 +163,10 @@ class AssistantDialog(QDialog):
             self.refresh()
 
     def rebuild(self):
-        self.start(lambda progress: self.index.rebuild(progress), self.output.setPlainText)
+        def task(progress):
+            service = ModelService(self.config) if self.external.isChecked() and self.config.get('embedding_model') else None
+            return self.index.rebuild(progress, embeddings=service)
+        self.start(task, self.output.setPlainText)
 
     def ask(self):
         query, scope, external = self.question.text().strip(), self.scope.text().strip(), self.external.isChecked()
@@ -164,13 +178,22 @@ class AssistantDialog(QDialog):
                 result = ask(self.index, query, scope,
                              embeddings=service if service and self.config.get('embedding_model') else None,
                              service=service)
-            except Exception:
+            except Exception as exc:
+                self.index.record_feedback(query, scope=scope, failure=type(exc).__name__)
                 if not external:
                     raise
                 result = ask(self.index, query, scope)
                 result['answer'] = '外部服务不可用，已退回本地证据摘录。\n' + result['answer']
-            return self.render_answer(result)
-        self.start(task, self.output.setPlainText)
+            if result.get('notice'):
+                self.index.record_feedback(query, result.get('answer', ''), result.get('citations', []),
+                                           scope, failure='service_fallback')
+            return self.render_answer(result), result, query, scope
+        self.start(task, self.show_answer)
+
+    def show_answer(self, payload):
+        rendered, result, query, scope = payload
+        self.output.setPlainText(rendered)
+        self.feedback.bind(query, result, scope)
 
     @staticmethod
     def render_answer(result):

@@ -1,0 +1,575 @@
+{
+  "dataset": "7 developer-authored synthetic questions; 6 answerable, 1 unsupported",
+  "models": "local only; no chat model or external embeddings called",
+  "pipeline": "query rewrite -> intent routing -> hybrid candidates -> local rerank -> extractive answer",
+  "metrics": {
+    "keyword": {
+      "recall@1": 0.8333333333333334,
+      "recall@3": 1.0,
+      "answer_relevance_token_overlap_proxy": 0.5820054945054947,
+      "faithfulness_source_alignment_proxy": 0.8461538461538461,
+      "unsupported_refusal_rate": 1.0,
+      "citation_authenticity_rate": 1.0,
+      "citation_count": 13
+    },
+    "hybrid": {
+      "recall@1": 0.8333333333333334,
+      "recall@3": 1.0,
+      "answer_relevance_token_overlap_proxy": 0.5820054945054947,
+      "faithfulness_source_alignment_proxy": 0.8461538461538461,
+      "unsupported_refusal_rate": 1.0,
+      "citation_authenticity_rate": 1.0,
+      "citation_count": 13
+    }
+  },
+  "rows": [
+    {
+      "mode": "keyword",
+      "id": "normal",
+      "intent": "field",
+      "retrieved": [
+        [
+          "rules.txt",
+          1
+        ],
+        [
+          "rules.txt",
+          2
+        ],
+        [
+          "ocr_errors.txt",
+          1
+        ]
+      ],
+      "rerank_scores": [
+        0.7500533852547242,
+        0.5843635521980852,
+        0.2505296504721246
+      ],
+      "expected": [
+        [
+          "rules.txt",
+          1
+        ]
+      ],
+      "citations_authentic": [
+        true,
+        true,
+        true
+      ],
+      "citations_source_aligned": [
+        true,
+        true,
+        false
+      ],
+      "abstained": false,
+      "model_used": false,
+      "answer": "以下为相关规则的原文摘录；未写明的情况仍属证据不足，不据此推断。请核对适用性。"
+    },
+    {
+      "mode": "keyword",
+      "id": "paraphrase",
+      "intent": "field",
+      "retrieved": [
+        [
+          "rules.txt",
+          2
+        ],
+        [
+          "rules.txt",
+          1
+        ],
+        [
+          "ocr_errors.txt",
+          1
+        ]
+      ],
+      "rerank_scores": [
+        0.5875392024576828,
+        0.10788175657979576,
+        0.06481553119113956
+      ],
+      "expected": [
+        [
+          "rules.txt",
+          2
+        ]
+      ],
+      "citations_authentic": [
+        true
+      ],
+      "citations_source_aligned": [
+        true
+      ],
+      "abstained": false,
+      "model_used": false,
+      "answer": "以下为相关规则的原文摘录；未写明的情况仍属证据不足，不据此推断。请核对适用性。"
+    },
+    {
+      "mode": "keyword",
+      "id": "cross_page",
+      "intent": "field",
+      "retrieved": [
+        [
+          "rules.txt",
+          1
+        ],
+        [
+          "rules.txt",
+          2
+        ],
+        [
+          "ocr_errors.txt",
+          1
+        ]
+      ],
+      "rerank_scores": [
+        0.6210347212280436,
+        0.5849775613976679,
+        0.08211848346034607
+      ],
+      "expected": [
+        [
+          "rules.txt",
+          1
+        ],
+        [
+          "rules.txt",
+          2
+        ]
+      ],
+      "citations_authentic": [
+        true,
+        true,
+        true
+      ],
+      "citations_source_aligned": [
+        true,
+        true,
+        true
+      ],
+      "abstained": false,
+      "model_used": false,
+      "answer": "以下为相关规则的原文摘录；未写明的情况仍属证据不足，不据此推断。请核对适用性。"
+    },
+    {
+      "mode": "keyword",
+      "id": "ocr_error",
+      "intent": "field",
+      "retrieved": [
+        [
+          "rules.txt",
+          2
+        ],
+        [
+          "ocr_errors.txt",
+          1
+        ],
+        [
+          "rules.txt",
+          1
+        ]
+      ],
+      "rerank_scores": [
+        0.6375961314865733,
+        0.5465748707902949,
+        0.23348662319445404
+      ],
+      "expected": [
+        [
+          "ocr_errors.txt",
+          1
+        ],
+        [
+          "rules.txt",
+          2
+        ]
+      ],
+      "citations_authentic": [
+        true,
+        true
+      ],
+      "citations_source_aligned": [
+        true,
+        true
+      ],
+      "abstained": false,
+      "model_used": false,
+      "answer": "以下为相关规则的原文摘录；未写明的情况仍属证据不足，不据此推断。请核对适用性。"
+    },
+    {
+      "mode": "keyword",
+      "id": "no_answer",
+      "intent": "field",
+      "retrieved": [
+        [
+          "rules.txt",
+          1
+        ]
+      ],
+      "rerank_scores": [
+        0.1540384872815302
+      ],
+      "expected": [],
+      "citations_authentic": [],
+      "citations_source_aligned": [],
+      "abstained": true,
+      "model_used": false,
+      "answer": "证据不足，未找到可支持答案的规范，请补充资料或缩小问题范围。"
+    },
+    {
+      "mode": "keyword",
+      "id": "wrong_scope",
+      "intent": "field",
+      "retrieved": [
+        [
+          "rules.txt",
+          1
+        ],
+        [
+          "rules.txt",
+          2
+        ],
+        [
+          "ocr_errors.txt",
+          1
+        ]
+      ],
+      "rerank_scores": [
+        0.47550367147749484,
+        0.35338426307452653,
+        0.08277110105423
+      ],
+      "expected": [
+        [
+          "rules.txt",
+          1
+        ]
+      ],
+      "citations_authentic": [
+        true,
+        true,
+        true
+      ],
+      "citations_source_aligned": [
+        true,
+        true,
+        false
+      ],
+      "abstained": false,
+      "model_used": false,
+      "answer": "以下为相关规则的原文摘录；未写明的情况仍属证据不足，不据此推断。请核对适用性。"
+    },
+    {
+      "mode": "keyword",
+      "id": "manual",
+      "intent": "manual",
+      "retrieved": [
+        [
+          "manual.txt",
+          1
+        ]
+      ],
+      "rerank_scores": [
+        0.5873146767355374
+      ],
+      "expected": [
+        [
+          "manual.txt",
+          1
+        ]
+      ],
+      "citations_authentic": [
+        true
+      ],
+      "citations_source_aligned": [
+        true
+      ],
+      "abstained": false,
+      "model_used": false,
+      "answer": "以下为相关规则的原文摘录；未写明的情况仍属证据不足，不据此推断。请核对适用性。"
+    },
+    {
+      "mode": "hybrid",
+      "id": "normal",
+      "intent": "field",
+      "retrieved": [
+        [
+          "rules.txt",
+          1
+        ],
+        [
+          "rules.txt",
+          2
+        ],
+        [
+          "ocr_errors.txt",
+          1
+        ]
+      ],
+      "rerank_scores": [
+        0.8020338721695609,
+        0.6439811572922131,
+        0.21761314523188333
+      ],
+      "expected": [
+        [
+          "rules.txt",
+          1
+        ]
+      ],
+      "citations_authentic": [
+        true,
+        true,
+        true
+      ],
+      "citations_source_aligned": [
+        true,
+        true,
+        false
+      ],
+      "abstained": false,
+      "model_used": false,
+      "answer": "以下为相关规则的原文摘录；未写明的情况仍属证据不足，不据此推断。请核对适用性。"
+    },
+    {
+      "mode": "hybrid",
+      "id": "paraphrase",
+      "intent": "field",
+      "retrieved": [
+        [
+          "rules.txt",
+          2
+        ],
+        [
+          "rules.txt",
+          1
+        ],
+        [
+          "ocr_errors.txt",
+          1
+        ]
+      ],
+      "rerank_scores": [
+        0.6485194163127457,
+        0.23221080173065536,
+        0.1296153704727847
+      ],
+      "expected": [
+        [
+          "rules.txt",
+          2
+        ]
+      ],
+      "citations_authentic": [
+        true
+      ],
+      "citations_source_aligned": [
+        true
+      ],
+      "abstained": false,
+      "model_used": false,
+      "answer": "以下为相关规则的原文摘录；未写明的情况仍属证据不足，不据此推断。请核对适用性。"
+    },
+    {
+      "mode": "hybrid",
+      "id": "cross_page",
+      "intent": "field",
+      "retrieved": [
+        [
+          "rules.txt",
+          1
+        ],
+        [
+          "rules.txt",
+          2
+        ],
+        [
+          "ocr_errors.txt",
+          1
+        ]
+      ],
+      "rerank_scores": [
+        0.6674710680011499,
+        0.6479726017899665,
+        0.07127070216829533
+      ],
+      "expected": [
+        [
+          "rules.txt",
+          1
+        ],
+        [
+          "rules.txt",
+          2
+        ]
+      ],
+      "citations_authentic": [
+        true,
+        true,
+        true
+      ],
+      "citations_source_aligned": [
+        true,
+        true,
+        true
+      ],
+      "abstained": false,
+      "model_used": false,
+      "answer": "以下为相关规则的原文摘录；未写明的情况仍属证据不足，不据此推断。请核对适用性。"
+    },
+    {
+      "mode": "hybrid",
+      "id": "ocr_error",
+      "intent": "field",
+      "retrieved": [
+        [
+          "ocr_errors.txt",
+          1
+        ],
+        [
+          "rules.txt",
+          2
+        ],
+        [
+          "rules.txt",
+          1
+        ]
+      ],
+      "rerank_scores": [
+        0.7011726346570226,
+        0.6923597464999437,
+        0.22284923786816277
+      ],
+      "expected": [
+        [
+          "ocr_errors.txt",
+          1
+        ],
+        [
+          "rules.txt",
+          2
+        ]
+      ],
+      "citations_authentic": [
+        true,
+        true
+      ],
+      "citations_source_aligned": [
+        true,
+        true
+      ],
+      "abstained": false,
+      "model_used": false,
+      "answer": "以下为相关规则的原文摘录；未写明的情况仍属证据不足，不据此推断。请核对适用性。"
+    },
+    {
+      "mode": "hybrid",
+      "id": "no_answer",
+      "intent": "field",
+      "retrieved": [
+        [
+          "rules.txt",
+          1
+        ],
+        [
+          "rules.txt",
+          2
+        ]
+      ],
+      "rerank_scores": [
+        0.33126348547305096,
+        0.1471733641418785
+      ],
+      "expected": [],
+      "citations_authentic": [],
+      "citations_source_aligned": [],
+      "abstained": true,
+      "model_used": false,
+      "answer": "证据不足，未找到可支持答案的规范，请补充资料或缩小问题范围。"
+    },
+    {
+      "mode": "hybrid",
+      "id": "wrong_scope",
+      "intent": "field",
+      "retrieved": [
+        [
+          "rules.txt",
+          1
+        ],
+        [
+          "rules.txt",
+          2
+        ],
+        [
+          "ocr_errors.txt",
+          1
+        ]
+      ],
+      "rerank_scores": [
+        0.5349109242176844,
+        0.4265853950163947,
+        0.06752858621598187
+      ],
+      "expected": [
+        [
+          "rules.txt",
+          1
+        ]
+      ],
+      "citations_authentic": [
+        true,
+        true,
+        true
+      ],
+      "citations_source_aligned": [
+        true,
+        true,
+        false
+      ],
+      "abstained": false,
+      "model_used": false,
+      "answer": "以下为相关规则的原文摘录；未写明的情况仍属证据不足，不据此推断。请核对适用性。"
+    },
+    {
+      "mode": "hybrid",
+      "id": "manual",
+      "intent": "manual",
+      "retrieved": [
+        [
+          "manual.txt",
+          1
+        ]
+      ],
+      "rerank_scores": [
+        0.6751212242441925
+      ],
+      "expected": [
+        [
+          "manual.txt",
+          1
+        ]
+      ],
+      "citations_authentic": [
+        true
+      ],
+      "citations_source_aligned": [
+        true
+      ],
+      "abstained": false,
+      "model_used": false,
+      "answer": "以下为相关规则的原文摘录；未写明的情况仍属证据不足，不据此推断。请核对适用性。"
+    }
+  ],
+  "metric_definitions": {
+    "answer_relevance_token_overlap_proxy": "Question-token overlap with cited quotes; lexical proxy, not semantic judge.",
+    "faithfulness_source_alignment_proxy": "Cited quote occurs in an expected source/page; provenance proxy, not entailment.",
+    "citation_authenticity_rate": "Exact quote substring exists on the cited indexed source/page.",
+    "unsupported_refusal_rate": "No citation returned for the authored unsupported question."
+  },
+  "limits": [
+    "Small authored test set; not a production quality estimate.",
+    "Semantic faithfulness and answer relevance require blind human or independent model review.",
+    "No real model participated."
+  ]
+}

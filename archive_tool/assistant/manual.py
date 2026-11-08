@@ -20,13 +20,14 @@ QUESTION_ALIASES = {'怎么开始': '新手入门', '不会用': '新手入门',
                     '找回没写完': '草稿', '日期格式错误': '校验'}
 
 
-def prepare_manual(index, directory, progress=lambda message: None):
+def prepare_manual(index, directory, progress=lambda message: None, embeddings=None):
     paths = sorted(Path(directory).glob('*.md'))
     if not paths:
         raise ValueError('内置操作手册资源缺失，请检查安装目录 resources/manual')
     for path in paths:
         progress(f'准备操作指南：{path.stem}')
-        index.import_file(path, kind='手册', scope=SCOPE, progress=progress)
+        index.import_file(path, kind='手册', scope=SCOPE, progress=progress,
+                          embeddings=embeddings)
     return len(paths)
 
 

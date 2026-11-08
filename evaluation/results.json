@@ -44,8 +44,11 @@
             "id": "638efbd6eea1a9b8bce0",
             "kind": "规范",
             "scope": "文书",
-            "imported": "2026-11-07T07:37:38.597113+00:00",
-            "retrieval_score": 0.6135719910778963,
+            "imported": "2026-11-08T03:28:06.179188+00:00",
+            "retrieval_score": 0.6867734371761149,
+            "rerank_score": 0.7500533852547242,
+            "intent": "field",
+            "rewritten_query": "文件题名如何填写 文件标题 标题",
             "quote": "文件题名：题名应照录文件标题，不得自行概括；无题名时应标记待人工核实。"
           },
           {
@@ -56,8 +59,11 @@
             "id": "638efbd6eea1a9b8bce0",
             "kind": "规范",
             "scope": "文书",
-            "imported": "2026-11-07T07:37:38.597113+00:00",
-            "retrieval_score": 0.6135719910778963,
+            "imported": "2026-11-08T03:28:06.179188+00:00",
+            "retrieval_score": 0.6867734371761149,
+            "rerank_score": 0.7500533852547242,
+            "intent": "field",
+            "rewritten_query": "文件题名如何填写 文件标题 标题",
             "quote": "跨页题名处理：标题在下一页继续时，需核对下一页的续行。"
           },
           {
@@ -68,11 +74,17 @@
             "id": "bffc4b7a17ec81565264",
             "kind": "规范",
             "scope": "文书",
-            "imported": "2026-11-07T07:37:38.597113+00:00",
-            "retrieval_score": 0.5734623443633283,
+            "imported": "2026-11-08T03:28:06.179188+00:00",
+            "retrieval_score": 0.47158424725331327,
+            "rerank_score": 0.5843635521980852,
+            "intent": "field",
+            "rewritten_query": "文件题名如何填写 文件标题 标题",
             "quote": "跨页题名处理续条：题名应完整保留副题名，不得遗漏续页文字。"
           }
-        ]
+        ],
+        "model_used": false,
+        "mode": "本地证据检索与摘录",
+        "retrieved": 0
       }
     },
     {
@@ -82,6 +94,14 @@
         [
           "rules.txt",
           2
+        ],
+        [
+          "rules.txt",
+          1
+        ],
+        [
+          "ocr_errors.txt",
+          1
         ]
       ],
       "recall@1": 1.0,
@@ -99,11 +119,17 @@
             "id": "bffc4b7a17ec81565264",
             "kind": "规范",
             "scope": "文书",
-            "imported": "2026-11-07T07:37:38.597113+00:00",
-            "retrieval_score": 0.1638463841038081,
+            "imported": "2026-11-08T03:28:06.179188+00:00",
+            "retrieval_score": 0.4865069763439368,
+            "rerank_score": 0.5875392024576828,
+            "intent": "field",
+            "rewritten_query": "责任者如何填写 署名单位 发文单位",
             "quote": "责任者：按原文署名的发文单位著录，不得用收文单位代替。"
           }
-        ]
+        ],
+        "model_used": false,
+        "mode": "本地证据检索与摘录",
+        "retrieved": 0
       }
     },
     {
@@ -119,7 +145,7 @@
           2
         ],
         [
-          "manual.txt",
+          "ocr_errors.txt",
           1
         ]
       ],
@@ -138,8 +164,11 @@
             "id": "638efbd6eea1a9b8bce0",
             "kind": "规范",
             "scope": "文书",
-            "imported": "2026-11-07T07:37:38.597113+00:00",
-            "retrieval_score": 0.5329480400990121,
+            "imported": "2026-11-08T03:28:06.179188+00:00",
+            "retrieval_score": 0.7050239879106326,
+            "rerank_score": 0.6210347212280436,
+            "intent": "field",
+            "rewritten_query": "跨页题名和副题名如何处理 文件标题 标题",
             "quote": "文件题名：题名应照录文件标题，不得自行概括；无题名时应标记待人工核实。"
           },
           {
@@ -150,8 +179,11 @@
             "id": "638efbd6eea1a9b8bce0",
             "kind": "规范",
             "scope": "文书",
-            "imported": "2026-11-07T07:37:38.597113+00:00",
-            "retrieval_score": 0.5329480400990121,
+            "imported": "2026-11-08T03:28:06.179188+00:00",
+            "retrieval_score": 0.7050239879106326,
+            "rerank_score": 0.6210347212280436,
+            "intent": "field",
+            "rewritten_query": "跨页题名和副题名如何处理 文件标题 标题",
             "quote": "跨页题名处理：标题在下一页继续时，需核对下一页的续行。"
           },
           {
@@ -162,11 +194,17 @@
             "id": "bffc4b7a17ec81565264",
             "kind": "规范",
             "scope": "文书",
-            "imported": "2026-11-07T07:37:38.597113+00:00",
-            "retrieval_score": 0.4378978809844386,
+            "imported": "2026-11-08T03:28:06.179188+00:00",
+            "retrieval_score": 0.4779096682498811,
+            "rerank_score": 0.5849775613976679,
+            "intent": "field",
+            "rewritten_query": "跨页题名和副题名如何处理 文件标题 标题",
             "quote": "跨页题名处理续条：题名应完整保留副题名，不得遗漏续页文字。"
           }
-        ]
+        ],
+        "model_used": false,
+        "mode": "本地证据检索与摘录",
+        "retrieved": 0
       }
     },
     {
@@ -201,8 +239,11 @@
             "id": "bffc4b7a17ec81565264",
             "kind": "规范",
             "scope": "文书",
-            "imported": "2026-11-07T07:37:38.597113+00:00",
-            "retrieval_score": 0.5016750465679883,
+            "imported": "2026-11-08T03:28:06.179188+00:00",
+            "retrieval_score": 0.46342755709079375,
+            "rerank_score": 0.6375961314865733,
+            "intent": "field",
+            "rewritten_query": "文件日期缺失如何填写 形成日期 落款时间",
             "quote": "文件日期：按原文形成日期著录，格式为YYYYMMDD；日期缺失时不得猜测。"
           },
           {
@@ -213,11 +254,17 @@
             "id": "89ffeeafe4e18a45c2a6",
             "kind": "规范",
             "scope": "文书",
-            "imported": "2026-11-07T07:37:38.587125+00:00",
-            "retrieval_score": 0.3853373177942262,
+            "imported": "2026-11-08T03:28:06.170188+00:00",
+            "retrieval_score": 0.3813850356982369,
+            "rerank_score": 0.5465748707902949,
+            "intent": "field",
+            "rewritten_query": "文件日期缺失如何填写 形成日期 落款时间",
             "quote": "文件日其：按原文形成日其填写，缺失时不得推测。"
           }
-        ]
+        ],
+        "model_used": false,
+        "mode": "本地证据检索与摘录",
+        "retrieved": 0
       }
     },
     {
@@ -233,7 +280,10 @@
       "abstained": true,
       "answer": {
         "answer": "证据不足，未找到可支持答案的规范，请补充资料或缩小问题范围。",
-        "citations": []
+        "citations": [],
+        "model_used": false,
+        "mode": "本地证据检索与摘录",
+        "retrieved": 0
       }
     },
     {
@@ -247,6 +297,10 @@
         [
           "rules.txt",
           2
+        ],
+        [
+          "ocr_errors.txt",
+          1
         ]
       ],
       "recall@1": 1.0,
@@ -264,8 +318,11 @@
             "id": "638efbd6eea1a9b8bce0",
             "kind": "规范",
             "scope": "文书",
-            "imported": "2026-11-07T07:37:38.597113+00:00",
-            "retrieval_score": 0.3403485038492136,
+            "imported": "2026-11-08T03:28:06.179188+00:00",
+            "retrieval_score": 0.6199304198780667,
+            "rerank_score": 0.47550367147749484,
+            "intent": "field",
+            "rewritten_query": "题名是否使用买卖双方名称 文件标题 标题",
             "quote": "文件题名：题名应照录文件标题，不得自行概括；无题名时应标记待人工核实。"
           },
           {
@@ -276,8 +333,11 @@
             "id": "638efbd6eea1a9b8bce0",
             "kind": "规范",
             "scope": "文书",
-            "imported": "2026-11-07T07:37:38.597113+00:00",
-            "retrieval_score": 0.3403485038492136,
+            "imported": "2026-11-08T03:28:06.179188+00:00",
+            "retrieval_score": 0.6199304198780667,
+            "rerank_score": 0.47550367147749484,
+            "intent": "field",
+            "rewritten_query": "题名是否使用买卖双方名称 文件标题 标题",
             "quote": "跨页题名处理：标题在下一页继续时，需核对下一页的续行。"
           },
           {
@@ -288,11 +348,17 @@
             "id": "bffc4b7a17ec81565264",
             "kind": "规范",
             "scope": "文书",
-            "imported": "2026-11-07T07:37:38.597113+00:00",
-            "retrieval_score": 0.27265686423952984,
+            "imported": "2026-11-08T03:28:06.179188+00:00",
+            "retrieval_score": 0.3941531415336684,
+            "rerank_score": 0.35338426307452653,
+            "intent": "field",
+            "rewritten_query": "题名是否使用买卖双方名称 文件标题 标题",
             "quote": "跨页题名处理续条：题名应完整保留副题名，不得遗漏续页文字。"
           }
-        ]
+        ],
+        "model_used": false,
+        "mode": "本地证据检索与摘录",
+        "retrieved": 0
       }
     },
     {
@@ -301,10 +367,6 @@
       "retrieved": [
         [
           "manual.txt",
-          1
-        ],
-        [
-          "ocr_errors.txt",
           1
         ]
       ],
@@ -323,11 +385,17 @@
             "id": "b14ba3e1ddfcdb151662",
             "kind": "手册",
             "scope": "文书",
-            "imported": "2026-11-07T07:37:38.577025+00:00",
-            "retrieval_score": 0.39056673294247163,
+            "imported": "2026-11-08T03:28:06.159183+00:00",
+            "retrieval_score": 0.46148649632821764,
+            "rerank_score": 0.5873146767355374,
+            "intent": "manual",
+            "rewritten_query": "导出如何操作 批次导出 Excel 导出",
             "quote": "导出：选择批次后点击导出，Excel按照模板生成对应字段。"
           }
-        ]
+        ],
+        "model_used": false,
+        "mode": "本地证据检索与摘录",
+        "retrieved": 0
       }
     },
     {
@@ -362,8 +430,11 @@
             "id": "638efbd6eea1a9b8bce0",
             "kind": "规范",
             "scope": "文书",
-            "imported": "2026-11-07T07:37:38.597113+00:00",
-            "retrieval_score": 0.7685368724213342,
+            "imported": "2026-11-08T03:28:06.179188+00:00",
+            "retrieval_score": 0.7907344110057883,
+            "rerank_score": 0.8020338721695609,
+            "intent": "field",
+            "rewritten_query": "文件题名如何填写 文件标题 标题",
             "quote": "文件题名：题名应照录文件标题，不得自行概括；无题名时应标记待人工核实。"
           },
           {
@@ -374,8 +445,11 @@
             "id": "638efbd6eea1a9b8bce0",
             "kind": "规范",
             "scope": "文书",
-            "imported": "2026-11-07T07:37:38.597113+00:00",
-            "retrieval_score": 0.7685368724213342,
+            "imported": "2026-11-08T03:28:06.179188+00:00",
+            "retrieval_score": 0.7907344110057883,
+            "rerank_score": 0.8020338721695609,
+            "intent": "field",
+            "rewritten_query": "文件题名如何填写 文件标题 标题",
             "quote": "跨页题名处理：标题在下一页继续时，需核对下一页的续行。"
           },
           {
@@ -386,11 +460,17 @@
             "id": "bffc4b7a17ec81565264",
             "kind": "规范",
             "scope": "文书",
-            "imported": "2026-11-07T07:37:38.597113+00:00",
-            "retrieval_score": 0.6135398959127404,
+            "imported": "2026-11-08T03:28:06.179188+00:00",
+            "retrieval_score": 0.5908194574415688,
+            "rerank_score": 0.6439811572922131,
+            "intent": "field",
+            "rewritten_query": "文件题名如何填写 文件标题 标题",
             "quote": "跨页题名处理续条：题名应完整保留副题名，不得遗漏续页文字。"
           }
-        ]
+        ],
+        "model_used": false,
+        "mode": "本地证据检索与摘录",
+        "retrieved": 0
       }
     },
     {
@@ -425,11 +505,17 @@
             "id": "bffc4b7a17ec81565264",
             "kind": "规范",
             "scope": "文书",
-            "imported": "2026-11-07T07:37:38.597113+00:00",
-            "retrieval_score": 0.5748448522563295,
+            "imported": "2026-11-08T03:28:06.179188+00:00",
+            "retrieval_score": 0.6084674040540626,
+            "rerank_score": 0.6485194163127457,
+            "intent": "field",
+            "rewritten_query": "责任者如何填写 署名单位 发文单位",
             "quote": "责任者：按原文署名的发文单位著录，不得用收文单位代替。"
           }
-        ]
+        ],
+        "model_used": false,
+        "mode": "本地证据检索与摘录",
+        "retrieved": 0
       }
     },
     {
@@ -445,7 +531,7 @@
           2
         ],
         [
-          "manual.txt",
+          "ocr_errors.txt",
           1
         ]
       ],
@@ -464,8 +550,11 @@
             "id": "638efbd6eea1a9b8bce0",
             "kind": "规范",
             "scope": "文书",
-            "imported": "2026-11-07T07:37:38.597113+00:00",
-            "retrieval_score": 0.7223602224770362,
+            "imported": "2026-11-08T03:28:06.179188+00:00",
+            "retrieval_score": 0.7978966814568451,
+            "rerank_score": 0.6674710680011499,
+            "intent": "field",
+            "rewritten_query": "跨页题名和副题名如何处理 文件标题 标题",
             "quote": "文件题名：题名应照录文件标题，不得自行概括；无题名时应标记待人工核实。"
           },
           {
@@ -476,8 +565,11 @@
             "id": "638efbd6eea1a9b8bce0",
             "kind": "规范",
             "scope": "文书",
-            "imported": "2026-11-07T07:37:38.597113+00:00",
-            "retrieval_score": 0.7223602224770362,
+            "imported": "2026-11-08T03:28:06.179188+00:00",
+            "retrieval_score": 0.7978966814568451,
+            "rerank_score": 0.6674710680011499,
+            "intent": "field",
+            "rewritten_query": "跨页题名和副题名如何处理 文件标题 标题",
             "quote": "跨页题名处理：标题在下一页继续时，需核对下一页的续行。"
           },
           {
@@ -488,11 +580,17 @@
             "id": "bffc4b7a17ec81565264",
             "kind": "规范",
             "scope": "文书",
-            "imported": "2026-11-07T07:37:38.597113+00:00",
-            "retrieval_score": 0.5827100687121944,
+            "imported": "2026-11-08T03:28:06.179188+00:00",
+            "retrieval_score": 0.6038997490344784,
+            "rerank_score": 0.6479726017899665,
+            "intent": "field",
+            "rewritten_query": "跨页题名和副题名如何处理 文件标题 标题",
             "quote": "跨页题名处理续条：题名应完整保留副题名，不得遗漏续页文字。"
           }
-        ]
+        ],
+        "model_used": false,
+        "mode": "本地证据检索与摘录",
+        "retrieved": 0
       }
     },
     {
@@ -527,8 +625,11 @@
             "id": "89ffeeafe4e18a45c2a6",
             "kind": "规范",
             "scope": "文书",
-            "imported": "2026-11-07T07:37:38.587125+00:00",
-            "retrieval_score": 0.6580648365405511,
+            "imported": "2026-11-08T03:28:06.170188+00:00",
+            "retrieval_score": 0.6905805634316923,
+            "rerank_score": 0.7011726346570226,
+            "intent": "field",
+            "rewritten_query": "文件日期缺失如何填写 形成日期 落款时间",
             "quote": "文件日其：按原文形成日其填写，缺失时不得推测。"
           },
           {
@@ -539,11 +640,17 @@
             "id": "bffc4b7a17ec81565264",
             "kind": "规范",
             "scope": "文书",
-            "imported": "2026-11-07T07:37:38.597113+00:00",
-            "retrieval_score": 0.5647079644586923,
+            "imported": "2026-11-08T03:28:06.179188+00:00",
+            "retrieval_score": 0.5729547871175343,
+            "rerank_score": 0.6923597464999437,
+            "intent": "field",
+            "rewritten_query": "文件日期缺失如何填写 形成日期 落款时间",
             "quote": "文件日期：按原文形成日期著录，格式为YYYYMMDD；日期缺失时不得猜测。"
           }
-        ]
+        ],
+        "model_used": false,
+        "mode": "本地证据检索与摘录",
+        "retrieved": 0
       }
     },
     {
@@ -563,7 +670,10 @@
       "abstained": true,
       "answer": {
         "answer": "证据不足，未找到可支持答案的规范，请补充资料或缩小问题范围。",
-        "citations": []
+        "citations": [],
+        "model_used": false,
+        "mode": "本地证据检索与摘录",
+        "retrieved": 0
       }
     },
     {
@@ -577,6 +687,10 @@
         [
           "rules.txt",
           2
+        ],
+        [
+          "ocr_errors.txt",
+          1
         ]
       ],
       "recall@1": 1.0,
@@ -594,8 +708,11 @@
             "id": "638efbd6eea1a9b8bce0",
             "kind": "规范",
             "scope": "文书",
-            "imported": "2026-11-07T07:37:38.597113+00:00",
-            "retrieval_score": 0.58889531292602,
+            "imported": "2026-11-08T03:28:06.179188+00:00",
+            "retrieval_score": 0.7387449253584457,
+            "rerank_score": 0.5349109242176844,
+            "intent": "field",
+            "rewritten_query": "题名是否使用买卖双方名称 文件标题 标题",
             "quote": "文件题名：题名应照录文件标题，不得自行概括；无题名时应标记待人工核实。"
           },
           {
@@ -606,8 +723,11 @@
             "id": "638efbd6eea1a9b8bce0",
             "kind": "规范",
             "scope": "文书",
-            "imported": "2026-11-07T07:37:38.597113+00:00",
-            "retrieval_score": 0.58889531292602,
+            "imported": "2026-11-08T03:28:06.179188+00:00",
+            "retrieval_score": 0.7387449253584457,
+            "rerank_score": 0.5349109242176844,
+            "intent": "field",
+            "rewritten_query": "题名是否使用买卖双方名称 文件标题 标题",
             "quote": "跨页题名处理：标题在下一页继续时，需核对下一页的续行。"
           },
           {
@@ -618,11 +738,17 @@
             "id": "bffc4b7a17ec81565264",
             "kind": "规范",
             "scope": "文书",
-            "imported": "2026-11-07T07:37:38.597113+00:00",
-            "retrieval_score": 0.45272550620411894,
+            "imported": "2026-11-08T03:28:06.179188+00:00",
+            "retrieval_score": 0.5405554054174049,
+            "rerank_score": 0.4265853950163947,
+            "intent": "field",
+            "rewritten_query": "题名是否使用买卖双方名称 文件标题 标题",
             "quote": "跨页题名处理续条：题名应完整保留副题名，不得遗漏续页文字。"
           }
-        ]
+        ],
+        "model_used": false,
+        "mode": "本地证据检索与摘录",
+        "retrieved": 0
       }
     },
     {
@@ -632,14 +758,6 @@
         [
           "manual.txt",
           1
-        ],
-        [
-          "ocr_errors.txt",
-          1
-        ],
-        [
-          "rules.txt",
-          2
         ]
       ],
       "recall@1": 1.0,
@@ -657,11 +775,17 @@
             "id": "b14ba3e1ddfcdb151662",
             "kind": "手册",
             "scope": "文书",
-            "imported": "2026-11-07T07:37:38.577025+00:00",
-            "retrieval_score": 0.5921890051032132,
+            "imported": "2026-11-08T03:28:06.159183+00:00",
+            "retrieval_score": 0.6370995913455277,
+            "rerank_score": 0.6751212242441925,
+            "intent": "manual",
+            "rewritten_query": "导出如何操作 批次导出 Excel 导出",
             "quote": "导出：选择批次后点击导出，Excel按照模板生成对应字段。"
           }
-        ]
+        ],
+        "model_used": false,
+        "mode": "本地证据检索与摘录",
+        "retrieved": 0
       }
     }
   ],

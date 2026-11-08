@@ -6,6 +6,7 @@ from config.settings import DATA_DIR, BASE_DIR, get_resource_path
 from assistant.index import KnowledgeIndex
 from assistant.manual import prepare_manual, ask_manual, SCOPE
 from assistant.services import ModelService, load_config
+from assistant.feedback_ui import FeedbackControls
 from .assistant_dialog import Work
 
 
@@ -66,6 +67,8 @@ class ManualDialog(QDialog):
         self.status = QLabel('正在准备随软件提供的操作指南…')
         self.status.setWordWrap(True)
         layout.addWidget(self.status)
+        self.feedback = FeedbackControls(self.index, self.status.setText)
+        layout.addWidget(self.feedback)
         row = QHBoxLayout()
         self.import_button = QPushButton('补充本软件操作手册')
         self.import_button.clicked.connect(self.import_manual)
@@ -87,6 +90,7 @@ class ManualDialog(QDialog):
         for control in self.controls:
             control.setEnabled(not busy)
         self.external.setEnabled(not busy and self.model_available)
+        self.feedback.setEnabled(not busy and self.feedback.has_context)
 
     def start(self, task, callback):
         if self.worker and self.worker.isRunning():
@@ -124,19 +128,30 @@ class ManualDialog(QDialog):
         self.status.setText('正在查找与问题相关的操作步骤…')
         def task(progress):
             if not external:
-                return ask_manual(self.index, query)
-            try:
-                service = ModelService(self.config)
-                return ask_manual(self.index, query, service,
-                    use_embeddings=bool(self.config.get('embedding_model')))
-            except Exception:
                 result = ask_manual(self.index, query)
-                result['notice'] = '模型服务不可用，已退回本地手册检索。'
-                return result
+            else:
+                try:
+                    service = ModelService(self.config)
+                    use_embeddings = bool(self.config.get('embedding_model'))
+                    if use_embeddings:
+                        prepare_manual(self.index, get_resource_path('resources/manual'), progress,
+                                       embeddings=service)
+                    result = ask_manual(self.index, query, service, use_embeddings=use_embeddings)
+                except Exception as exc:
+                    self.index.record_feedback(query, scope=SCOPE, failure=type(exc).__name__)
+                    result = ask_manual(self.index, query)
+                    result['notice'] = '模型服务不可用，已退回本地手册检索。'
+            if result.get('notice'):
+                self.index.record_feedback(query, result.get('answer', ''), result.get('citations', []),
+                                           SCOPE, failure='service_fallback')
+            result['_question'] = query
+            result['_scope'] = SCOPE
+            return result
         self.start(task, self.show_result)
 
     def show_result(self, result):
         self.last_result = result
+        self.feedback.bind(result.get('_question', ''), result, result.get('_scope', SCOPE))
         sections = [result.get('notice', ''), result['answer']]
         for i, cite in enumerate(result['citations'], 1):
             sections.append(f"[{i}] {cite['quote']}\n\n出处：{cite['source']}\n"
@@ -159,7 +174,14 @@ class ManualDialog(QDialog):
                 try:
                     message = self.index.import_file(path, '手册', SCOPE, progress, embeddings=service)
                 except Exception as exc:
-                    message = f'导入失败，原索引保留：{exc}'
+                    if service:
+                        try:
+                            message = '嵌入失败，已回退本地索引：' + self.index.import_file(
+                                path, '手册', SCOPE, progress)
+                        except Exception:
+                            message = f'导入失败，原索引保留：{exc}'
+                    else:
+                        message = f'导入失败，原索引保留：{exc}'
                 results.append(f'{path}: {message}')
             return '\n'.join(results)
         def finished(text):

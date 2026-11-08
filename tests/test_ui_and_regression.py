@@ -211,3 +211,25 @@ def test_real_entry_page_and_confirmed_fill(app, tmp_path, monkeypatch):
     dialog.reject()
     entry.close()
     database.close_connection()
+
+
+def test_feedback_controls_save_rating_and_correction(app, tmp_path):
+    from assistant.index import KnowledgeIndex
+    from assistant.feedback_ui import FeedbackControls
+
+    index = KnowledgeIndex(tmp_path / 'knowledge.sqlite3')
+    messages = []
+    controls = FeedbackControls(index, messages.append)
+    assert not controls.isEnabled()
+    controls.bind('如何导出当前批次',
+                  {'answer': '选择批次后导出。', 'citations': [{'quote': '1. 选择批次。'}]},
+                  '文书')
+    assert controls.isEnabled()
+    controls.not_helpful.click()
+    controls.correction.setText('还应提示先选择导出范围')
+    controls.submit.click()
+    rows = index.feedback_samples(needs_review=True)
+    assert len(rows) == 1
+    assert rows[0]['helpful'] is False
+    assert rows[0]['correction'] == '还应提示先选择导出范围'
+    assert not controls.has_context
