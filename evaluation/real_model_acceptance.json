@@ -1,0 +1,32 @@
+{
+  "real_models_used": true,
+  "chat_model": "qwen3.8-flash",
+  "embedding_model": "qwen3.7-text-embedding-flash",
+  "steps": [
+    "manual_import_and_embedding",
+    "manual_hybrid_retrieval_and_generation",
+    "policy_import_and_embedding",
+    "policy_hybrid_retrieval_and_generation",
+    "citation_source_checks"
+  ],
+  "manual_path": {
+    "question": "如何导出档案？",
+    "import": "已索引 1 页 / 1 片段",
+    "vector_count": 1,
+    "citation_count": 3,
+    "citations_verified_against_fixture": true,
+    "answer_mode": "模型辅助回答（引用已核验）"
+  },
+  "policy_path": {
+    "question": "文件题名如何填写？",
+    "import": "已索引 1 页 / 1 片段",
+    "vector_count": 1,
+    "citation_count": 1,
+    "citations_verified_against_fixture": true,
+    "answer_mode": "证据约束生成（逐句引用）"
+  },
+  "limits": [
+    "Synthetic sanitized manual and policy only; no archive data used.",
+    "Quote identity is checked; semantic faithfulness still requires human review."
+  ]
+}

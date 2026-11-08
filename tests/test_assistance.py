@@ -1,6 +1,6 @@
 from langchain_core.documents import Document
 from assistant.index import KnowledgeIndex
-from assistant.generation import ask, suggest, verify_grounded_answer
+from assistant.generation import ask, grounded_answer, suggest, verify_grounded_answer
 from assistant.retrieval import ArchiveRetriever
 from assistant.services import ModelService
 import pytest
@@ -78,3 +78,32 @@ def test_grounded_answer_requires_semantic_evidence():
         verify_grounded_answer(unsupported, citations)
     with pytest.raises(ValueError, match='未绑定引用'):
         verify_grounded_answer('{"answer":"系统支持自动联网上传。", "claims":[]}', citations)
+
+
+def test_grounded_answer_uses_langchain_chat_prompt_value():
+    from langchain_core.prompt_values import ChatPromptValue
+
+    citation = {'id': 'rule-1', 'quote': '文件题名应照录原文标题，不得自行增补。',
+                'source': 'rules.txt', 'page': 1}
+
+    class Service:
+        config = {'chat_model': 'mock-chat'}
+
+        def complete_prompt(self, prompt):
+            assert isinstance(prompt, ChatPromptValue)
+            messages = prompt.to_messages()
+            assert messages[0].type == 'system'
+            assert messages[1].type == 'human'
+            assert '文件题名怎么填写' in messages[1].content
+            assert citation['quote'] in messages[1].content
+            return ('{"answer":"文件题名应照录原文标题。",'
+                    '"claims":[{"text":"文件题名应照录原文标题。",'
+                    '"citation_ids":["rule-1"]}]}')
+
+        def check_claim_support(self, claim, evidence):
+            return True
+
+    doc = Document(page_content=citation['quote'], metadata={k: v for k, v in citation.items() if k != 'quote'})
+    result = grounded_answer('文件题名怎么填写', [doc], Service())
+    assert result['model_used']
+    assert result['citations'][0]['quote'] == citation['quote']

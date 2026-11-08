@@ -115,7 +115,7 @@ PDF 逐页提取文本，无文本页才 OCR。图片支持 PNG/JPEG/BMP/TIFF（
 python evaluation/real_model_smoke.py --allow-model-calls
 ```
 
-脚本验证导入、持久化向量、混合检索、聊天生成及引用原文匹配。若未配置模型，可省略授权参数确认脚本不会请求服务；pytest 中的完整链路测试使用 mock，不代表真实模型效果。
+脚本分别验证规范问答与操作手册问答两条链路，包括导入、持久化向量、混合检索、聊天生成及引用原文匹配；真实运行报告写入 `evaluation/real_model_acceptance.json`。若未配置模型，可省略授权参数确认脚本不会请求服务；pytest 中的链路回归使用 mock，不代表真实模型效果。
 
 ## 测试和评测
 
