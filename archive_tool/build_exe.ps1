@@ -91,6 +91,8 @@ $collectArgs = @(
 )
 
 $metadataArgs = @(
+    '--copy-metadata=langchain-core',
+    '--copy-metadata=langchain-text-splitters',
     '--copy-metadata=imageio',
     '--copy-metadata=imgaug'
 )

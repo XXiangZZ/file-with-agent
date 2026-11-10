@@ -105,7 +105,8 @@ def verify_model_answer(output, result):
                 citations=verified, mode='模型辅助回答（引用已核验）', model_used=True)
 
 
-def ask_manual(index, query, service=None, use_embeddings=False, k=4, mode='hybrid'):
+def ask_manual(index, query, service=None, use_embeddings=False, k=4, mode='hybrid',
+               generate=True):
     query = query.strip()
     if not query:
         raise ValueError('请输入操作问题')
@@ -121,7 +122,8 @@ def ask_manual(index, query, service=None, use_embeddings=False, k=4, mode='hybr
                 raise
             result = ask_manual(index, query, k=k, mode=mode)
             return dict(result, notice='模型或嵌入服务不可用，已退回本地手册检索。')
-        if service is None or not service.config.get('chat_model') or not result['citations']:
+        if (not generate or service is None or not service.config.get('chat_model')
+                or not result['citations']):
             return result
         # LLM generation is a real LangChain prompt -> model adapter -> parser chain.
         model_chain = PROMPT | RunnableLambda(service.complete_prompt) | RunnableLambda(

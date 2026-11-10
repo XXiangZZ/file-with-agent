@@ -41,14 +41,32 @@ def get_cursor():
     """上下文管理器，自动提交/回滚"""
     conn = get_connection()
     cursor = conn.cursor()
+    nested = conn.in_transaction
     try:
         yield cursor
+        if not nested:
+            conn.commit()
+    except Exception:
+        if not nested or conn.in_transaction:
+            conn.rollback()
+        raise
+    finally:
+        cursor.close()
+
+
+@contextmanager
+def atomic_transaction():
+    """Explicit transaction boundary for approved multi-manager writes."""
+    conn = get_connection()
+    if conn.in_transaction:
+        raise RuntimeError('数据库连接已有未完成事务')
+    conn.execute('BEGIN IMMEDIATE')
+    try:
+        yield conn
         conn.commit()
     except Exception:
         conn.rollback()
         raise
-    finally:
-        cursor.close()
 
 
 def init_database():
