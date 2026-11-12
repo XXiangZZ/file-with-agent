@@ -129,6 +129,16 @@ python evaluation/real_model_smoke.py --allow-model-calls
 
 ## 测试和评测
 
+P0 扩充评测入口（默认离线，不构造模型服务）：
+
+```powershell
+python evaluation/p0_eval.py
+```
+
+42 道脱敏题与 11 个语料文件的指标定义、方法消融、复现步骤和故障测试说明见 `evaluation/p0_readme.md`；对比见 `evaluation/p0_comparison.md`，逐题结果见 `evaluation/p0_results.json`。这是开发者构造的小样本，不能外推生产质量。默认保持原hybrid检索，收紧离线摘录后，Recall@3仍1.0，引用标注对齐率从0.5342升至0.8367，必要证据全覆盖从31/34升至33/34。可选BM25+RRF的Recall@3为0.9853，尚未设为默认。配置、回退及原因见 `evaluation/rag_improvement_review.md`。真实外部向量和聊天生成本次均未运行。
+
+新增本地 JSONL 诊断覆盖问答、检索 top-k、Agent 工具摘要、模型耗时、失败、核验及回退。默认存于知识库同级 `logs/assistant.jsonl`，独立模型请求使用 `config.settings.LOG_DIR`；每个文件上限 2 MiB，保留一个轮转备份。问题保存长度和 SHA-256 指纹，参数/结果只保存结构及数量，不落盘字段正文、凭据和完整提示词。轨迹不是计划持久化或恢复点，计划仍只在内存中。
+
 ```powershell
 python -m pytest tests -q
 python evaluation/run.py

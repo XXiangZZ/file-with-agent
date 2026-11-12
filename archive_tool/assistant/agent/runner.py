@@ -1,10 +1,12 @@
 """Bounded ReAct tool loop using LangChain Core messages and tools."""
 import json
+from time import perf_counter
 
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langsmith import tracing_context
 
 from assistant.generation import ask as ask_policy, verify_grounded_answer
+from assistant.tracing import traced, emit, argument_summary, result_summary, verification
 from .model_adapter import ArchiveChatModel
 from .tools import build_tools
 
@@ -27,10 +29,21 @@ def _model_visible_tool_result(result):
 
 
 def _invoke_untraced(runnable, value, config):
-    with tracing_context(enabled=False):
-        return runnable.invoke(value, config=config)
+    tool = hasattr(runnable, 'args_schema')
+    started = perf_counter()
+    try:
+        with tracing_context(enabled=False):
+            result = runnable.invoke(value, config=config)
+    except Exception as exc:
+        emit('tool_end' if tool else 'model_turn_end', elapsed_ms=round((perf_counter()-started)*1000, 3),
+             outcome='error', error_type=type(exc).__name__)
+        raise
+    emit('tool_end' if tool else 'model_turn_end', elapsed_ms=round((perf_counter()-started)*1000, 3),
+         outcome='ok', result=result_summary(result) if tool else None)
+    return result
 
 
+@verification('agent_final')
 def _verify_agent_answer(raw, citations):
     parsed = json.loads(raw)
     if not isinstance(parsed, dict) or not isinstance(parsed.get("claims"), list):
@@ -50,6 +63,7 @@ def _verify_agent_answer(raw, citations):
     return verify_grounded_answer(raw, citations)
 
 
+@traced('agent')
 def run_agent(query, index, service, *, allow_model_calls, record_manager=None,
               draft_manager=None, template_manager=None, batch_id=None,
               template_name=None, max_turns=MAX_MODEL_TURNS, local_tool="ask_policy"):
@@ -81,6 +95,7 @@ def run_agent(query, index, service, *, allow_model_calls, record_manager=None,
                 "get_record_detail": {"record_id": int(query) if query.isdigit() else -1},
                 "list_records": {"batch_id": batch_id or -1},
                 "list_drafts": {"batch_id": batch_id or -1}}[local_tool]
+        emit('tool_start', turn=0, call=1, tool=local_tool, arguments=argument_summary(args))
         output = _invoke_untraced(selected, args, {"recursion_limit": 4})
         try:
             payload = json.loads(output)
@@ -105,7 +120,8 @@ def run_agent(query, index, service, *, allow_model_calls, record_manager=None,
     tool_outputs = []
     failure = None
     try:
-        for _ in range(max_turns):
+        for turn in range(max_turns):
+            emit('model_turn_start', turn=turn + 1)
             response = _invoke_untraced(model, messages, {"recursion_limit": 8})
             messages.append(response)
             if not response.tool_calls:
@@ -118,8 +134,12 @@ def run_agent(query, index, service, *, allow_model_calls, record_manager=None,
                 if calls > 16:
                     raise RuntimeError("工具调用数量达到安全上限")
                 target = by_name.get(call.get("name"))
+                emit('tool_start', turn=turn + 1, call=calls,
+                     tool=call.get('name') if target else 'unknown',
+                     arguments=argument_summary(call.get('args', {})))
                 if target is None:
                     output = {"error": "工具不在允许列表中"}
+                    emit('tool_end', outcome='error', error_type='tool_not_allowed')
                 else:
                     try:
                         output = _invoke_untraced(target, call.get("args", {}),
@@ -148,6 +168,7 @@ def run_agent(query, index, service, *, allow_model_calls, record_manager=None,
     for plan in pending:
         plan.citations = list(citations)
     if failure:
+        emit('fallback', stage='agent', error_type=failure, pending_plans=len(pending))
         fallback = run_agent(query, index, None, allow_model_calls=False,
             record_manager=record_manager, draft_manager=draft_manager,
             template_manager=template_manager, batch_id=batch_id,

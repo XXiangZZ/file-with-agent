@@ -4,14 +4,16 @@ import re
 from datetime import datetime
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableLambda
-from .retrieval import ArchiveRetriever, tokens, ALIASES
+from .retrieval import ArchiveRetriever, tokens, ALIASES, cosine
+from .tracing import traced, emit, verification
+from .rag_settings import evidence_mode, retrieval_mode
 
 
 def citation(doc, quote=None):
     return dict(doc.metadata, quote=quote or doc.page_content)
 
 
-def evidence_answer(query, docs):
+def _legacy_evidence_answer(query, docs):
     # A search hit is not proof of an answer: require topical overlap after stop words.
     meaningful = tokens(query, True)
     normalized = query
@@ -34,6 +36,99 @@ def evidence_answer(query, docs):
                 if '缺失' in query and not any(t in normalized_line for t in ('缺失', '不详', '未注明')):
                     continue
                 evidence.append(citation(doc, line))
+    return {'answer': '以下为相关规则的原文摘录；未写明的情况仍属证据不足，不据此推断。请核对适用性。' if evidence
+            else '证据不足，未找到可支持答案的规范，请补充资料或缩小问题范围。',
+            'citations': evidence}
+
+
+POLICY_TOPICS = ('题名', '日期', '责任者', '保管期限', '密级', '件号', '页数', '导出', '保存')
+# Conditions describe when a clause applies; they are not generated answers.
+CONDITIONS = (('缺失', '不详', '未注明', '没有', '无题名'),
+              ('错字', '错误', '识别', '扫描', 'ocr'),
+              ('跨页', '续页', '续行', '副题名'),
+              ('优先', '效力', '生效'))
+
+
+def _canonical(text):
+    for alias, canonical in ALIASES.items():
+        text = text.replace(alias, canonical)
+    return text.lower()
+
+
+def _evidence_terms(text, topic):
+    text = _canonical(text).replace(topic, '')
+    for noise in ('文件', '如何', '怎么', '什么', '填写', '著录', '处理', '请问', '可以',
+                  '能否', '是否', '分别', '怎么办', '按照', '用什么', '能不能'):
+        text = text.replace(noise, '')
+    return tokens(text, True)
+
+
+def _topic_requests(query):
+    """Attach a field's conditions to that field, not the whole question.
+
+    Keep the question text as-is (after existing aliases); this is evidence
+    selection, not an extra retrieval query or a generated factual answer.
+    """
+    normalized = _canonical(query)
+    matches = list(re.finditer('|'.join(re.escape(topic) for topic in POLICY_TOPICS), normalized))
+    requests = {}
+    for i, match in enumerate(matches):
+        start = match.start()
+        for prefix in ('没有', '缺失', '无'):
+            if normalized[:start].endswith(prefix):
+                start -= len(prefix)
+                break
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(normalized)
+        # Prefix modifiers such as 跨页/副 belong to this topic, not another field.
+        if i == 0:
+            start = 0
+        requests.setdefault(match.group(), []).append(normalized[start:end])
+    return {topic: ' '.join(parts) for topic, parts in requests.items()}
+
+
+def _focused_policy_evidence(query, docs):
+    requests = _topic_requests(query)
+    evidence = []
+    for topic, request in requests.items():
+        required = [group for group in CONDITIONS if any(term in request for term in group)]
+        candidates = []
+        for doc in docs:
+            for line in doc.page_content.splitlines():
+                text = _canonical(line)
+                if topic not in text or not line.strip():
+                    continue
+                if any(not any(term in text for term in group) for group in required):
+                    continue
+                inactive = sum(any(term in text for term in group) for group in CONDITIONS if group not in required)
+                score = cosine(_evidence_terms(request, topic), _evidence_terms(line, topic))
+                # Prefer the normal field clause for generic questions, rather than
+                # copying every conditional clause sharing a field name.
+                score += .12 * (line.split('：', 1)[0] in {topic, '文件' + topic})
+                score -= .12 * inactive
+                # Canonical aliases help retrieval; original spelling helps break
+                # ties between an OCR transcription and a clean source, not repair it.
+                score += .08 * any(alias in query and alias in line for alias in ALIASES)
+                candidates.append((score, doc, line))
+        if not candidates:
+            continue
+        best = max(score for score, _, _ in candidates)
+        # A conflict question needs both sides, even if one side's wording has
+        # less overlap. Selecting the closest clause alone can conceal conflict.
+        comparing_conflict = any(term in request for term in ('冲突', '矛盾', '不一致'))
+        for score, doc, line in candidates:
+            if comparing_conflict or score >= best - .05:
+                evidence.append(citation(doc, line))
+    unique = {(item['id'], item['quote']): item for item in evidence}
+    return list(unique.values())
+
+
+def evidence_answer(query, docs, *, selection=None):
+    selection = selection or evidence_mode()
+    if selection == 'legacy':
+        return _legacy_evidence_answer(query, docs)
+    if selection != 'focused':
+        raise ValueError('未知的证据选择模式')
+    evidence = _focused_policy_evidence(query, docs)
     return {'answer': '以下为相关规则的原文摘录；未写明的情况仍属证据不足，不据此推断。请核对适用性。' if evidence
             else '证据不足，未找到可支持答案的规范，请补充资料或缩小问题范围。',
             'citations': evidence}
@@ -62,6 +157,7 @@ def _semantic_support(claim, quotes):
     return len(overlap) >= 2 and len(overlap) / len(claim_tokens) >= 0.35
 
 
+@verification('claims_token_support')
 def verify_grounded_answer(raw, citations):
     parsed = json.loads(raw) if isinstance(raw, str) else raw
     if not isinstance(parsed, dict) or not isinstance(parsed.get('answer'), str):
@@ -109,13 +205,17 @@ def grounded_answer(query, docs, service):
         for claim in result['claims']:
             support = [by_id[item_id]['quote'] for item_id in claim['citation_ids']]
             if not service.check_claim_support(claim['text'], support):
+                emit('verification', kind='model_entailment', passed=False)
                 raise ValueError('模型语义支持校验未通过')
+            emit('verification', kind='model_entailment', passed=True)
     result['mode'] = '证据约束生成（逐句引用）'
     result['retrieved'] = len(docs)
     return result
 
 
-def ask(index, query, scope='通用', mode='hybrid', embeddings=None, service=None):
+@traced('policy')
+def ask(index, query, scope='通用', mode=None, embeddings=None, service=None):
+    mode = mode or retrieval_mode()
     def make_chain(active_embeddings, active_service):
         retriever = ArchiveRetriever(index=index, scope=scope, mode=mode,
                                      embeddings=active_embeddings)
@@ -131,6 +231,7 @@ def ask(index, query, scope='通用', mode='hybrid', embeddings=None, service=No
         except Exception as exc:
             if not embeddings and not service:
                 raise
+            emit('fallback', stage='policy', error_type=type(exc).__name__)
             result = make_chain(None, None).invoke(query)
             result['notice'] = '模型或嵌入服务不可用，已退回本地证据检索。'
             result['model_used'] = False
@@ -139,6 +240,8 @@ def ask(index, query, scope='通用', mode='hybrid', embeddings=None, service=No
         result.setdefault('model_used', bool(service and service.config.get('chat_model')))
         result.setdefault('mode', '本地证据检索与摘录')
         result.setdefault('retrieved', 0)
+        emit('answer', model_used=result['model_used'], citations=len(result.get('citations', [])),
+             abstained=not bool(result.get('citations')))
         return result
 
 

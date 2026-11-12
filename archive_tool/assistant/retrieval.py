@@ -1,4 +1,4 @@
-"""LangChain retriever: lexical baseline + local latent semantic analysis hybrid.
+"""Local retrieval: legacy cosine/LSA and optional BM25 + rank fusion.
 
 LSA is fitted on the current local corpus, not a pretrained language model.
 Optional configured embeddings replace LSA when explicitly permitted.
@@ -7,7 +7,10 @@ import math
 import re
 from collections import Counter
 from typing import Any
+from pydantic import Field
 from langchain_core.retrievers import BaseRetriever
+from .tracing import retrieval_event
+from .rag_settings import retrieval_mode
 
 ALIASES = {'标题': '题名', '发文单位': '责任者', '落款单位': '责任者',
            '落款时间': '日期', '形成时间': '日期', '日其': '日期'}
@@ -94,15 +97,89 @@ def latent_scores(query, docs):
     return scores.tolist()
 
 
+def bm25_scores(query, docs, *, k1=1.2, b=.75):
+    """Positive Robertson IDF, saturated TF and document length normalization.
+
+    Uses the same Chinese character/bigram tokens, not a new NLP dependency.
+    Query terms are unique so synonym expansion does not multiply query TF.
+    """
+    if not math.isfinite(k1) or k1 <= 0 or not math.isfinite(b) or not 0 <= b <= 1:
+        raise ValueError('BM25参数要求k1>0，0<=b<=1')
+    counts = [tokens(doc.page_content, True) for doc in docs]
+    if not counts:
+        return []
+    lengths = [sum(count.values()) for count in counts]
+    average = sum(lengths) / len(counts)
+    if average == 0:
+        return [0.] * len(docs)
+    query_terms = set(tokens(query, True))
+    frequencies = Counter(term for count in counts for term in count if term in query_terms)
+    idf = {term: math.log1p((len(docs) - df + .5) / (df + .5))
+           for term, df in frequencies.items()}
+    result = []
+    for count, length in zip(counts, lengths):
+        norm = k1 * (1 - b + b * length / average)
+        result.append(sum(weight * count[term] * (k1 + 1) / (count[term] + norm)
+                          for term, weight in idf.items() if count[term]))
+    return result
+
+
+def reciprocal_rank_fusion(rankings, *, rank_constant=60):
+    """Fuse identities by 1/(k+rank), starting at rank 1. No score mixing."""
+    if not isinstance(rank_constant, int) or isinstance(rank_constant, bool) or rank_constant < 1:
+        raise ValueError('RRF名次常数必须为正整数')
+    scores = Counter()
+    for ranking in rankings:
+        seen = set()
+        for identity in ranking:
+            if identity in seen:
+                continue
+            seen.add(identity)
+            scores[identity] += 1 / (rank_constant + len(seen))
+    return dict(scores)
+
+
+def _bm25_rrf(query, rewritten, docs, semantic, *, k, k1, b, rank_constant, intent):
+    lexical = bm25_scores(rewritten, docs, k1=k1, b=b)
+    def ranking(scores):
+        return [doc.metadata['id'] for score, doc in sorted(zip(scores, docs),
+                key=lambda row: (-row[0], row[1].metadata['id'])) if score > 1e-12]
+    lexical_rank, semantic_rank = ranking(lexical), ranking(semantic)
+    fused = reciprocal_rank_fusion([lexical_rank, semantic_rank], rank_constant=rank_constant)
+    lexical_positions = {identity: rank for rank, identity in enumerate(lexical_rank, 1)}
+    semantic_positions = {identity: rank for rank, identity in enumerate(semantic_rank, 1)}
+    by_id = {doc.metadata['id']: (doc, score) for doc, score in zip(docs, lexical)}
+    candidates = sorted(fused, key=lambda identity: (-fused[identity], identity))[:max(k, k * 3)]
+    result = []
+    for identity in candidates:
+        doc, bm25 = by_id[identity]
+        # RRF is ~0.03 at k=60. Fixed theoretical scaling, not corpus min/max,
+        # keeps the existing rerank retrieval term meaningful without mixing
+        # uncalibrated BM25 and semantic scores. Raw RRF stays in metadata.
+        rerank_input = fused[identity] * (rank_constant + 1) / 2
+        score = local_rerank(query, rewritten, doc, rerank_input, intent)
+        doc.metadata.update(retrieval_score=fused[identity], rerank_score=score,
+            bm25_score=bm25, bm25_rank=lexical_positions.get(identity),
+            semantic_rank=semantic_positions.get(identity), rerank_input=rerank_input,
+            retrieval_method='bm25_rrf', intent=intent, rewritten_query=rewritten)
+        result.append(doc)
+    return sorted(result, key=lambda doc: (-doc.metadata['rerank_score'], doc.metadata['id']))[:k]
+
+
 class ArchiveRetriever(BaseRetriever):
     index: Any
     scope: str = '通用'
-    mode: str = 'hybrid'
+    mode: str = Field(default_factory=retrieval_mode)
     k: int = 4
     embeddings: Any = None
     kinds: list[str] | None = None
+    bm25_k1: float = Field(default=1.2, gt=0, allow_inf_nan=False)
+    bm25_b: float = Field(default=.75, ge=0, le=1, allow_inf_nan=False)
+    rrf_k: int = Field(default=60, ge=1, strict=True)
 
     def _get_relevant_documents(self, query, *, run_manager):
+        if self.mode not in {'keyword', 'hybrid', 'bm25_rrf'}:
+            raise ValueError('未知的检索模式')
         intent = route_intent(query)
         effective_kinds = self.kinds
         if effective_kinds is None and intent == 'manual':
@@ -115,6 +192,7 @@ class ArchiveRetriever(BaseRetriever):
             expected_model=getattr(self.embeddings, 'model_name', None)) if use_vectors else []
         docs = [doc for doc, _ in persisted] if use_vectors else self.index.documents(self.scope, effective_kinds)
         if not docs or not query.strip():
+            retrieval_event([], self.mode, self.k)
             return []
         q = tokens(rewritten, self.mode != 'keyword')
         vectors = None
@@ -129,6 +207,14 @@ class ArchiveRetriever(BaseRetriever):
             query_vector = self.embeddings.embed_query(rewritten)
             if len(query_vector) != len(vectors[0]):
                 raise ValueError('文档和问题嵌入维度不一致')
+        if self.mode == 'bm25_rrf':
+            if vectors is not None:
+                semantic = [cosine(dict(enumerate(query_vector)), dict(enumerate(vector)))
+                            for vector in vectors]
+            result = _bm25_rrf(query, rewritten, docs, semantic, k=self.k,
+                k1=self.bm25_k1, b=self.bm25_b, rank_constant=self.rrf_k, intent=intent)
+            retrieval_event(result, self.mode, self.k)
+            return result
         candidates = []
         for i, doc in enumerate(docs):
             score = cosine(q, tokens(doc.page_content, self.mode != 'keyword'))
@@ -147,5 +233,7 @@ class ArchiveRetriever(BaseRetriever):
             doc.metadata.update(rerank_score=final_score, intent=intent,
                                 rewritten_query=rewritten)
             reranked.append((final_score, doc))
-        return [doc for _, doc in sorted(reranked,
+        result = [doc for _, doc in sorted(reranked,
             key=lambda row: (-row[0], row[1].metadata['id']))[:self.k]]
+        retrieval_event(result, self.mode, self.k)
+        return result

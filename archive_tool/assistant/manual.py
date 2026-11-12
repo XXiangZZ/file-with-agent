@@ -11,6 +11,8 @@ from langchain_core.runnables import RunnableLambda
 from langsmith import tracing_context
 from .retrieval import ArchiveRetriever, tokens
 from .generation import citation
+from .tracing import traced, emit, verification
+from .rag_settings import evidence_mode, retrieval_mode
 
 SCOPE = '软件操作'
 QUESTION_ALIASES = {'怎么开始': '新手入门', '不会用': '新手入门', '第一次用': '新手入门',
@@ -37,9 +39,15 @@ def normalize_question(query):
     return query
 
 
-def manual_evidence(query, docs):
+def manual_evidence(query, docs, *, selection=None):
     """Select matching manual sections; generic lexical hits alone cannot answer."""
     q = tokens(normalize_question(query), True)
+    selection = selection or evidence_mode()
+    if selection not in {'focused', 'legacy'}:
+        raise ValueError('未知的证据选择模式')
+    normalized = normalize_question(query).lower()
+    actions = ('导入', '导出', '草稿', '检索', '校验', 'ocr', '新手入门', '录入')
+    requested = {action for action in actions if action in normalized}
     evidence = []
     headings = []
     for doc in docs:
@@ -47,6 +55,8 @@ def manual_evidence(query, docs):
         if not lines:
             continue
         heading = lines[0].lstrip('# ').strip()
+        if selection == 'focused' and requested and not any(action in heading.lower() for action in requested):
+            continue
         heading_words = tokens(heading, True)
         if not any(len(word) > 1 and word in q and
                    (re.search(r'[\u4e00-\u9fff]', word) or word == 'ocr')
@@ -63,8 +73,8 @@ def manual_evidence(query, docs):
     return evidence, headings
 
 
-def local_answer(query, docs):
-    citations, headings = manual_evidence(query, docs)
+def local_answer(query, docs, *, selection=None):
+    citations, headings = manual_evidence(query, docs, selection=selection)
     return {'answer': '按操作指南执行以下步骤；每组步骤均附出处。' if citations else
             '证据不足：操作手册未找到能回答该问题的步骤，请换个说法或补充对应手册。',
             'citations': citations, 'sections': headings, 'mode': '本地手册检索与摘录',
@@ -80,6 +90,7 @@ PROMPT = ChatPromptTemplate.from_messages([
     ('human', '问题：{question}\n手册证据：{evidence}')])
 
 
+@verification('manual_whole_step')
 def verify_model_answer(output, result):
     """Existence and whole-step checks; semantic applicability remains user-reviewed."""
     parsed = json.loads(output)
@@ -105,21 +116,26 @@ def verify_model_answer(output, result):
                 citations=verified, mode='模型辅助回答（引用已核验）', model_used=True)
 
 
-def ask_manual(index, query, service=None, use_embeddings=False, k=4, mode='hybrid',
+@traced('manual')
+def ask_manual(index, query, service=None, use_embeddings=False, k=4, mode=None,
                generate=True):
     query = query.strip()
     if not query:
         raise ValueError('请输入操作问题')
+    mode = mode or retrieval_mode()
     retriever = ArchiveRetriever(index=index, scope=SCOPE, kinds=['手册'], k=k,
         mode=mode, embeddings=service if use_embeddings else None)
     retrieval_chain = RunnableLambda(normalize_question) | retriever
-    local_chain = retrieval_chain | RunnableLambda(lambda docs: local_answer(query, docs))
+    # Keep the existing model prompt/context path unchanged pending real-service review.
+    selection = 'legacy' if generate and service and service.config.get('chat_model') else None
+    local_chain = retrieval_chain | RunnableLambda(lambda docs: local_answer(query, docs, selection=selection))
     with tracing_context(enabled=False):
         try:
             result = local_chain.invoke(query)
-        except Exception:
+        except Exception as exc:
             if service is None:
                 raise
+            emit('fallback', stage='manual_retrieval', error_type=type(exc).__name__)
             result = ask_manual(index, query, k=k, mode=mode)
             return dict(result, notice='模型或嵌入服务不可用，已退回本地手册检索。')
         if (not generate or service is None or not service.config.get('chat_model')
@@ -131,5 +147,6 @@ def ask_manual(index, query, service=None, use_embeddings=False, k=4, mode='hybr
         try:
             return model_chain.invoke({'question': query,
                 'evidence': json.dumps(result['citations'], ensure_ascii=False)})
-        except Exception:
+        except Exception as exc:
+            emit('fallback', stage='manual_generation', error_type=type(exc).__name__)
             return dict(result, notice='模型不可用或引用核验失败，已退回本地原文步骤。')

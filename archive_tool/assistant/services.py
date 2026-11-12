@@ -4,6 +4,8 @@ import os
 from pathlib import Path
 from urllib.request import Request, urlopen
 from urllib.parse import urlparse
+from urllib.error import HTTPError, URLError
+from .tracing import traced, emit
 
 
 class ModelService:
@@ -27,6 +29,7 @@ class ModelService:
             if parsed.scheme == 'http' and parsed.hostname not in {'localhost', '127.0.0.1', '::1'}:
                 raise ValueError('非本机模型地址必须使用 HTTPS')
 
+    @traced('transport')
     def post(self, route, payload):
         headers = {'Content-Type': 'application/json'}
         embedding = route == '/embeddings'
@@ -39,10 +42,22 @@ class ModelService:
         if key:
             headers['Authorization'] = f'Bearer {key}'
         request = Request(endpoint + route, data=json.dumps(payload, ensure_ascii=False).encode(), headers=headers)
+        emit('model_request', route='embedding' if embedding else 'chat')
         try:
             with urlopen(request, timeout=self.timeout) as response:
-                return json.load(response)
-        except Exception:
+                result = json.load(response)
+                usage = result.get('usage', {}) if isinstance(result, dict) else {}
+                emit('model_response', usage={key: usage[key] for key in
+                     ('prompt_tokens', 'completion_tokens', 'total_tokens')
+                     if isinstance(usage, dict) and isinstance(usage.get(key), int)})
+                return result
+        except Exception as exc:
+            category = ('timeout' if isinstance(exc, TimeoutError) or
+                        isinstance(getattr(exc, 'reason', None), TimeoutError) else
+                        'http' if isinstance(exc, HTTPError) else
+                        'network' if isinstance(exc, URLError) else
+                        'invalid_json' if isinstance(exc, ValueError) else 'transport')
+            emit('model_error', category=category, error_type=type(exc).__name__)
             # Do not expose response bodies, request content or credentials in UI/logs.
             raise RuntimeError('模型服务不可用；请检查服务地址、模型、凭据或超时') from None
 
