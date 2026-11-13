@@ -129,6 +129,8 @@ python evaluation/real_model_smoke.py --allow-model-calls
 
 ## 测试和评测
 
+最新P0验收见 `evaluation/p0_acceptance.md`，新增功能与实现/运行方式见 `evaluation/p0_acceptance_readme.md`。已补整段answer覆盖校验、多轮tool_calls回传、20题Agent脚本回归及17题真实Agent验收，并运行42题真实嵌入检索和14题生成子集。首轮结果有失败，未声称模型能力全项达标；真实计划不批准不执行。`evaluation/p0_eval.py`仍保持默认离线，真实验收必须显式授权。
+
 P0 扩充评测入口（默认离线，不构造模型服务）：
 
 ```powershell

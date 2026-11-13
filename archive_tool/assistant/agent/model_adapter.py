@@ -46,7 +46,12 @@ class ArchiveChatModel(BaseChatModel):
             raise ValueError("不支持的消息类型")
         if not isinstance(message.content, str):
             raise ValueError("工具模式只接受文本消息")
-        return {"role": role, "content": message.content}
+        result = {"role": role, "content": message.content}
+        if isinstance(message, AIMessage) and message.tool_calls:
+            result['tool_calls'] = [{'id': call['id'], 'type': 'function', 'function': {
+                'name': call['name'], 'arguments': json.dumps(call['args'], ensure_ascii=False)}}
+                for call in message.tool_calls]
+        return result
 
     def _generate(self, messages, stop=None, run_manager=None, **kwargs) -> ChatResult:
         payload = {"model": self.service.chat_model, "temperature": 0,

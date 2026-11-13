@@ -24,3 +24,4 @@ archive_tool/config/assistant.local.json
 archive_tool/data/logs/*.jsonl*
 evaluation/p0_traces.jsonl*
 evaluation/stage*/p0_traces.jsonl*
+evaluation/real_retrieval/p0_traces.jsonl*
