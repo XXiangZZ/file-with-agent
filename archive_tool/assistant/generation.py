@@ -7,6 +7,7 @@ from langchain_core.runnables import RunnableLambda
 from .retrieval import ArchiveRetriever, tokens, ALIASES, cosine
 from .tracing import traced, emit, verification
 from .rag_settings import evidence_mode, retrieval_mode
+from .runtime import budgeted
 
 
 def citation(doc, quote=None):
@@ -257,6 +258,7 @@ def grounded_answer(query, docs, service):
 
 
 @traced('policy')
+@budgeted
 def ask(index, query, scope='通用', mode=None, embeddings=None, service=None):
     mode = mode or retrieval_mode()
     def make_chain(active_embeddings, active_service):

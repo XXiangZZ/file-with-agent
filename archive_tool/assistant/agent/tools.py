@@ -97,7 +97,8 @@ def build_tools(index, service=None, record_manager=None, draft_manager=None,
             description=description, args_schema=schema))
 
     def policy(question: str, scope: str = "通用"):
-        embeddings = service if allow_model_calls and service and service.embedding_model else None
+        scope = template_name if scope == '通用' and template_name else scope
+        embeddings = service if allow_model_calls and service and getattr(service, 'embedding_model', '') else None
         result = ask_policy(index, question, scope, embeddings=embeddings)
         result["citations"] = _safe_citations(result.get("citations", []))
         return _json(result)
@@ -105,7 +106,7 @@ def build_tools(index, service=None, record_manager=None, draft_manager=None,
     add("ask_policy", "按范围检索档案规范，按需使用已索引向量；回答逐句带引用并经本地支持校验，证据不足时拒答。", QuestionArgs, policy)
 
     def manual(question: str):
-        embeddings = service if allow_model_calls and service and service.embedding_model else None
+        embeddings = service if allow_model_calls and service and getattr(service, 'embedding_model', '') else None
         result = ask_manual(index, question, service=embeddings,
                             use_embeddings=bool(embeddings), mode="hybrid",
                             generate=False)
@@ -131,6 +132,8 @@ def build_tools(index, service=None, record_manager=None, draft_manager=None,
             rows = [dict(row) for row in cursor.execute(sql, params).fetchall()]
         citations = _database_citations("search", rows, lambda row:
             f"记录编号 {row['id']}；批次 {row.get('batch_id')}；年度 {row.get('year')}；审核状态 {row.get('review_status')}；上传状态 {row.get('upload_status')}。")
+        citations.append({'id': 'db-search-count', 'kind': '数据库', 'source': '本地检索元数据',
+                          'quote': f'本次检索返回 {len(rows)} 条记录；返回上限 50 条，不代表全部匹配总数。'})
         return _json({"count": len(rows), "records": rows, "citations": citations, "limit": 50,
                       "privacy": "字段值与名称未返回给模型"})
 
@@ -157,6 +160,8 @@ def build_tools(index, service=None, record_manager=None, draft_manager=None,
                 for row in rows[:100]]
         citations = _database_citations("batch", safe, lambda row:
             f"记录编号 {row['id']}；批次 {row.get('batch_id')}；年度 {row.get('year')}；审核状态 {row.get('review_status')}。")
+        citations.append({'id': f'db-batch-{batch_id}-count', 'kind': '数据库', 'source': '本地批次元数据',
+                          'quote': f'批次 {batch_id} 共有 {len(rows)} 条记录；本次最多展示 100 条。'})
         return _json({"records": safe, "citations": citations, "count": len(rows), "limit": 100})
 
     add("list_records", "列出指定批次档案的安全元数据；档案名称和字段值留在本机。最多返回 100 条。", BatchArgs, list_records)
@@ -170,6 +175,8 @@ def build_tools(index, service=None, record_manager=None, draft_manager=None,
                       "page": None, "start_index": None, "kind": "数据库",
                       "quote": f"草稿编号 {row['id']}；所属批次 {row.get('batch_id')}；字段数量 {row.get('field_count')}。"}
                      for row in safe]
+        citations.append({'id': f'db-drafts-{batch_id}-count', 'kind': '数据库', 'source': '本地草稿元数据',
+                          'quote': f'批次 {batch_id} 共有 {len(rows)} 条草稿；本次最多展示 100 条。'})
         return _json({"drafts": safe, "citations": citations, "count": len(rows), "limit": 100,
                       "privacy": "草稿字段内容未返回给模型"})
 
@@ -184,7 +191,12 @@ def build_tools(index, service=None, record_manager=None, draft_manager=None,
             rows.append({"name": Path(source["path"]).name, "kind": source["kind"],
                          "scope": source["scope"], "imported": source["imported"],
                          "vector_state": state})
-        return _json({"sources": rows})
+        citations = [{'id': 'kb-source-count', 'source': '本地知识库元数据', 'kind': '元数据',
+                      'quote': f'知识库共有 {len(rows)} 份资料。'}]
+        for i, row in enumerate(rows):
+            citations.append({'id': f'kb-source-{i}', 'source': '本地知识库元数据', 'kind': '元数据',
+                'quote': f"资料文件名 {row['name']}；类别 {row['kind']}；适用范围 {row['scope']}；向量状态 {row['vector_state']}。"})
+        return _json({"sources": rows, 'citations': citations})
 
     add("kb_sources", "列出知识库资料类别、适用范围和向量状态；隐藏完整本地路径。", None, kb_sources)
 

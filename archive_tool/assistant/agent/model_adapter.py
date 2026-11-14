@@ -55,7 +55,8 @@ class ArchiveChatModel(BaseChatModel):
 
     def _generate(self, messages, stop=None, run_manager=None, **kwargs) -> ChatResult:
         payload = {"model": self.service.chat_model, "temperature": 0,
-                   "messages": [self._to_openai_message(item) for item in messages]}
+                   "messages": [self._to_openai_message(item) for item in messages],
+                   'response_format': {'type': 'json_object'}}
         tools = kwargs.get("tools", self._bound_tools)
         if tools:
             payload["tools"] = tools

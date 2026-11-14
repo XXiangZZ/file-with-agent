@@ -79,7 +79,8 @@ def test_unknown_and_invalid_tools_do_not_log_model_supplied_content(tmp_path):
     secret = '机密模型工具名及参数'
     path = tmp_path / 'invalid.jsonl'
     service = ScriptedService([tool(secret, {'name': secret}),
-        tool('get_record_detail', {'record_id': secret}), final('非法JSON' + secret)])
+        tool('get_record_detail', {'record_id': secret}), final('非法JSON' + secret),
+        final('仍然非法JSON' + secret)])
     result = run_agent(secret, KnowledgeIndex(tmp_path / 'kb.sqlite3'), service,
                        allow_model_calls=True, trace_path=path)
     assert '隐藏' in result['verified_answer']
@@ -117,6 +118,9 @@ def test_rag_manual_fallbacks_and_transport_error_classification(tmp_path, monke
     def unauthorized(*args, **kwargs):
         raise HTTPError('http://localhost/' + secret, 401, secret, {}, None)
     monkeypatch.setattr(services, 'urlopen', unauthorized)
+    # Earlier repeated transient errors now open the circuit. A fresh service
+    # isolates the non-retryable HTTP case; circuit behavior has separate tests.
+    service = ModelService({'chat_model': 'fake', 'chat_base_url': 'http://localhost/v1'})
     with pytest.raises(RuntimeError):
         service.post('/chat/completions', {'messages': [{'content': secret}]}, trace_path=path)
     assert any(event.get('category') == 'http' for event in rows(path))

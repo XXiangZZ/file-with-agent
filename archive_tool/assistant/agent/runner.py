@@ -1,5 +1,6 @@
 """Bounded ReAct tool loop using LangChain Core messages and tools."""
 import json
+import re
 from time import perf_counter
 
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
@@ -9,6 +10,8 @@ from assistant.generation import ask as ask_policy, verify_grounded_answer
 from assistant.tracing import traced, emit, argument_summary, result_summary, verification
 from .model_adapter import ArchiveChatModel
 from .tools import build_tools
+from assistant.runtime import budgeted
+from assistant.generation import _answer_units
 
 MAX_MODEL_TURNS = 4
 SYSTEM_PROMPT = """你是档案著录工作台的受控 ReAct 助手。根据问题自主选择只读工具，并可根据工具结果继续调用工具，最多四轮。
@@ -16,7 +19,10 @@ SYSTEM_PROMPT = """你是档案著录工作台的受控 ReAct 助手。根据问
 写工具只生成待确认执行计划，绝不能声称已执行。计划会由本地用户确认后单独执行。
 不得调用不存在的删除、上传、批量写入工具；最终回答必须是 JSON：{"answer":"...","claims":[{"text":"...","citation_ids":["..."],"source_type":"policy|manual|database"}]}。
 answer 只能由 claims.text 原句组成；不能另加未绑定出处的总结或操作完成声明。证据不足时 claims 为空。
-规范事实必须引用 ask_policy 返回的证据 ID；手册步骤必须逐字引用完整编号行；数据库工具只能支持计数、状态等元数据事实。无法支持的部分写“证据不足”。"""
+规范事实必须引用 ask_policy 返回的证据 ID；手册步骤必须逐字引用完整编号行；数据库工具只能支持计数、状态等元数据事实。无法支持的部分写“证据不足”。
+数据库/知识库元数据必须逐字引用返回的完整quote或分号分隔的完整子句，不能改写数字、状态、范围或添加总数推断。
+只读工具有了足够证据后立即给最终JSON；不得反复调用同一工具同一参数。禁止把用户非法ID偷偷换成其他ID。
+"""
 
 
 def _model_visible_tool_result(result):
@@ -61,16 +67,32 @@ def _verify_agent_answer(raw, citations):
         if manual_items and not any(claim.get("text") in item.get("quote", "").splitlines()
                                     for item in manual_items):
             raise ValueError("手册步骤不是逐字原文")
+        strict_items = [by_id[item_id] for item_id in ids if by_id[item_id].get('kind') in {'数据库', '元数据'}]
+        if strict_items:
+            allowed = {unit for item in strict_items for unit in _answer_units(item['quote'])}
+            units = _answer_units(claim.get('text', ''))
+            if not units or any(unit not in allowed for unit in units):
+                raise ValueError('元数据陈述必须逐字匹配安全证据子句')
     return verify_grounded_answer(raw, citations)
 
 
 @traced('agent')
+@budgeted
 def run_agent(query, index, service, *, allow_model_calls, record_manager=None,
               draft_manager=None, template_manager=None, batch_id=None,
               template_name=None, max_turns=MAX_MODEL_TURNS, local_tool="ask_policy"):
     """Run a per-question ReAct loop and return verified output plus pending plans."""
     if not isinstance(query, str) or not query.strip() or len(query) > 1000:
         raise ValueError("问题长度必须为 1 到 1000 个字符")
+    explicit_ids = {int(value) for value in re.findall(r'(?:记录(?:编号)?|档案编号)\s*([+-]?\d+)', query)}
+    if any(value <= 0 for value in explicit_ids):
+        emit('input_rejected', code='positive_record_id_required')
+        return {'answer': '证据不足：记录编号必须为正整数，请核对编号后再查询。',
+                'verified_answer': '证据不足：记录编号必须为正整数，请核对编号后再查询。',
+                'answer_verified': True, 'verified_claims': [], 'verified_citations': [],
+                'coverage': {'input_units': 0, 'covered_units': 0, 'input_fully_covered': True, 'rewritten': False},
+                'citations': [], 'plans': [], 'model_used': False, 'tool_calls': 0,
+                'mode': '本地参数校验', 'rejection_code': 'positive_record_id_required'}
     if not allow_model_calls:
         tools, _ = build_tools(index, None, record_manager, draft_manager,
             template_manager, batch_id, template_name, allow_model_calls=False)
@@ -115,7 +137,10 @@ def run_agent(query, index, service, *, allow_model_calls, record_manager=None,
         template_manager, batch_id, template_name, allow_model_calls=True)
     by_name = {item.name: item for item in tools}
     model = ArchiveChatModel(service=service).bind_tools(tools, tool_choice="auto")
-    messages = [SystemMessage(content=SYSTEM_PROMPT), HumanMessage(content=query)]
+    scopes = sorted({row['scope'] for row in index.sources() if row['kind'] == '规范'})
+    context = {'current_template': template_name, 'current_batch_id': batch_id, 'policy_scopes': scopes}
+    messages = [SystemMessage(content=SYSTEM_PROMPT + '\n本地上下文（仅用于参数，不是事实证据）：' +
+                              json.dumps(context, ensure_ascii=False)), HumanMessage(content=query)]
     calls = 0
     final = ""
     tool_outputs = []
@@ -127,6 +152,29 @@ def run_agent(query, index, service, *, allow_model_calls, record_manager=None,
             messages.append(response)
             if not response.tool_calls:
                 final = response.content if isinstance(response.content, str) else ""
+                try:
+                    parsed = json.loads(final)
+                    if not isinstance(parsed, dict) or not isinstance(parsed.get('claims'), list) or not isinstance(parsed.get('answer'), str):
+                        raise ValueError('invalid_final_schema')
+                    evidence = []
+                    for message in messages:
+                        if isinstance(message, ToolMessage):
+                            try:
+                                payload = json.loads(message.content)
+                                if isinstance(payload, dict):
+                                    evidence.extend(item for item in payload.get('citations', []) if isinstance(item, dict))
+                            except (ValueError, TypeError):
+                                pass
+                    _verify_agent_answer(final, evidence)
+                except (ValueError, TypeError):
+                    if turn + 1 < max_turns and not any(isinstance(message, HumanMessage) and
+                            message.content.startswith('格式纠正：') for message in messages):
+                        emit('final_format_repair', turn=turn + 1)
+                        messages.append(HumanMessage(content='格式纠正：只返回JSON对象，answer和claims两个字段；'
+                            '上个回答未通过结构或出处核验。有证据时claims.text必须直接复制工具quote的完整原句，'
+                            '包括数字空格与状态英文原值，绑定真实citation_ids；不要归纳改写。'
+                            '无支持则answer=证据不足、claims=[]。不要再调用工具。'))
+                        continue
                 break
             if len(response.tool_calls) > 8:
                 raise RuntimeError("单轮工具调用数量达到安全上限")
@@ -143,6 +191,9 @@ def run_agent(query, index, service, *, allow_model_calls, record_manager=None,
                     emit('tool_end', outcome='error', error_type='tool_not_allowed')
                 else:
                     try:
+                        args = call.get('args', {})
+                        if explicit_ids and 'record_id' in args and args['record_id'] not in explicit_ids:
+                            raise ValueError('模型记录编号不属于用户指定目标')
                         output = _invoke_untraced(target, call.get("args", {}),
                                                   {"recursion_limit": 8})
                     except Exception as exc:

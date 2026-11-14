@@ -32,8 +32,10 @@ def test_agent_full_scripted_control_path_does_not_construct_real_service(tmp_pa
     assert next(row for row in result['rows'] if row['id'] == 'A18')['model_turns'] == 0
     assert next(row for row in result['rows'] if row['id'] == 'A20')['model_turns'] == 4
     assert next(row for row in result['rows'] if row['id'] == 'A19')['fallback']
-    # The invalid ID intentionally reaches Pydantic; must remain in denominator.
-    assert result['metrics']['invalid_call_rate'] > 0
+    # Invalid user IDs are now blocked before invoking any model or tool;
+    # the negative case stays in the dataset and must remain safe, not be dropped.
+    invalid = next(row for row in result['rows'] if row['id'] == 'A16')
+    assert invalid['model_turns'] == 0 and invalid['refused_or_hidden']
     with pytest.raises(ValueError):
         agent_eval.run(tmp_path, config_path='must-not-read.json')
 

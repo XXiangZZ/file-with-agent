@@ -4,6 +4,14 @@
   "embedding_base_url": "http://127.0.0.1:11434/v1",
   "embedding_api_key_env": "ARCHIVE_EMBEDDING_API_KEY",
   "timeout": 30,
+  "task_timeout": 180,
+  "max_requests": 16,
+  "max_task_tokens": 256000,
+  "max_output_tokens": 2048,
+  "max_retries": 1,
+  "retry_backoff": 0.25,
+  "breaker_threshold": 3,
+  "breaker_cooldown": 30,
   "embedding_model": "",
   "chat_model": ""
 }

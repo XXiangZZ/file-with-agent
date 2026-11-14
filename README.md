@@ -129,6 +129,8 @@ python evaluation/real_model_smoke.py --allow-model-calls
 
 ## 测试和评测
 
+最新P0/P1改进见 `evaluation/p0_p1_followup.md`：Agent补当前上下文、计数/来源证据、元数据逐字核验、目标ID约束和有界最终格式纠正；真实只读问答最终复测6/7（中间7/7也保留）。独立语义评测使用deepseek-v4.1-flash，原始生成与复制摘录分开统计，见 `evaluation/semantic_readme.md`。模型调用已补有限重试、实例熔断与共享任务预算，配置/边界见 `evaluation/reliability.md`；1万合成片段基线及百万片段迁移方案见 `evaluation/scale_migration.md`。历史验收文档保留当时数字，不作为当前全仓库状态。
+
 最新P0验收见 `evaluation/p0_acceptance.md`，新增功能与实现/运行方式见 `evaluation/p0_acceptance_readme.md`。已补整段answer覆盖校验、多轮tool_calls回传、20题Agent脚本回归及17题真实Agent验收，并运行42题真实嵌入检索和14题生成子集。首轮结果有失败，未声称模型能力全项达标；真实计划不批准不执行。`evaluation/p0_eval.py`仍保持默认离线，真实验收必须显式授权。
 
 P0 扩充评测入口（默认离线，不构造模型服务）：

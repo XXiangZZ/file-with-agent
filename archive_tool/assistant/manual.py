@@ -13,6 +13,7 @@ from .retrieval import ArchiveRetriever, tokens
 from .generation import citation
 from .tracing import traced, emit, verification
 from .rag_settings import evidence_mode, retrieval_mode
+from .runtime import budgeted
 
 SCOPE = '软件操作'
 QUESTION_ALIASES = {'怎么开始': '新手入门', '不会用': '新手入门', '第一次用': '新手入门',
@@ -117,6 +118,7 @@ def verify_model_answer(output, result):
 
 
 @traced('manual')
+@budgeted
 def ask_manual(index, query, service=None, use_embeddings=False, k=4, mode=None,
                generate=True):
     query = query.strip()

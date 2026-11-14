@@ -1,0 +1,1836 @@
+{
+  "prompt_version": "semantic-judge-v1",
+  "real_judge_used": true,
+  "generator_model": "qwen3.8-flash",
+  "judge_model": "deepseek-v4.1-flash",
+  "status": "completed",
+  "metrics_by_origin": {
+    "calibration": {
+      "samples": 10,
+      "judged_samples": 10,
+      "failed_samples": 0,
+      "claim_count_judged": 11,
+      "faithfulness": 0.36363636363636365,
+      "context_count_judged": 16,
+      "context_precision": 0.5625,
+      "context_average_precision": 0.9259259259259258,
+      "contexts_with_no_relevant_evidence": 1
+    },
+    "local_focused_excerpts": {
+      "samples": 42,
+      "judged_samples": 29,
+      "failed_samples": 13,
+      "claim_count_judged": 50,
+      "faithfulness": 1.0,
+      "context_count_judged": 106,
+      "context_precision": 0.29245283018867924,
+      "context_average_precision": 1.0,
+      "contexts_with_no_relevant_evidence": 8
+    },
+    "previous_real_display_full_scoped_context": {
+      "samples": 6,
+      "judged_samples": 2,
+      "failed_samples": 4,
+      "claim_count_judged": 2,
+      "faithfulness": 1.0,
+      "context_count_judged": 10,
+      "context_precision": 0.2,
+      "context_average_precision": 0.2,
+      "contexts_with_no_relevant_evidence": 0
+    }
+  },
+  "calibration_label_agreement": 0.9259259259259259,
+  "calibration_judgements": 27,
+  "completed_cases": 58,
+  "planned_cases": 58,
+  "rows": [
+    {
+      "id": "S01",
+      "origin": "calibration",
+      "judgement": {
+        "faithfulness": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "上下文0逐字包含该断言，直接支持。",
+            "evidence": "日期缺失时不得猜测。"
+          }
+        ],
+        "relevance": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "直接说明日期缺失时的处理原则，回答该问题。",
+            "evidence": "日期缺失时不得猜测。"
+          },
+          {
+            "index": 1,
+            "verdict": false,
+            "reason": "讲导出前选择批次，与日期缺失如何处理无关。",
+            "evidence": "导出前选择批次。"
+          }
+        ]
+      },
+      "error_type": null,
+      "faithfulness_matches": [
+        true
+      ],
+      "relevance_matches": [
+        true,
+        true
+      ]
+    },
+    {
+      "id": "S02",
+      "origin": "calibration",
+      "judgement": {
+        "faithfulness": [
+          {
+            "index": 0,
+            "verdict": false,
+            "reason": "上下文明确说日期缺失时不得猜测，而该claim说可以猜测，直接矛盾。",
+            "evidence": "日期缺失时不得猜测。"
+          }
+        ],
+        "relevance": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "该上下文直接回答了日期缺失时应如何处理，即不得猜测。",
+            "evidence": "日期缺失时不得猜测。"
+          }
+        ]
+      },
+      "error_type": null,
+      "faithfulness_matches": [
+        true
+      ],
+      "relevance_matches": [
+        true
+      ]
+    },
+    {
+      "id": "S03",
+      "origin": "calibration",
+      "judgement": {
+        "faithfulness": [
+          {
+            "index": 0,
+            "verdict": false,
+            "reason": "上下文明确说保管期限为十年，不支持“三十年”。",
+            "evidence": "保管期限为十年。"
+          }
+        ],
+        "relevance": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "该上下文直接回答了保管期限是几年。",
+            "evidence": "保管期限为十年。"
+          }
+        ]
+      },
+      "error_type": null,
+      "faithfulness_matches": [
+        true
+      ],
+      "relevance_matches": [
+        true
+      ]
+    },
+    {
+      "id": "S04",
+      "origin": "calibration",
+      "judgement": {
+        "faithfulness": [
+          {
+            "index": 0,
+            "verdict": false,
+            "reason": "上下文只说明完成核对的档案可以导出，并未支持所有档案都可以导出。",
+            "evidence": "只有完成核对的档案可以导出。"
+          }
+        ],
+        "relevance": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "该上下文直接限定了可导出的档案范围，有助于回答是否所有档案都能直接导出。",
+            "evidence": "只有完成核对的档案可以导出。"
+          }
+        ]
+      },
+      "error_type": null,
+      "faithfulness_matches": [
+        true
+      ],
+      "relevance_matches": [
+        true
+      ]
+    },
+    {
+      "id": "S05",
+      "origin": "calibration",
+      "judgement": {
+        "faithfulness": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "该主张与上下文0完全一致，直接得到支持。",
+            "evidence": "先选择批次再导出。"
+          },
+          {
+            "index": 1,
+            "verdict": false,
+            "reason": "上下文仅说明导出步骤，未说明系统已经导出文件。",
+            "evidence": ""
+          }
+        ],
+        "relevance": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "该上下文直接说明导出批次的操作顺序，能回答如何导出批次。",
+            "evidence": "先选择批次再导出。"
+          },
+          {
+            "index": 1,
+            "verdict": false,
+            "reason": "该上下文讲OCR识别后核对原件，与如何导出批次无关。",
+            "evidence": ""
+          }
+        ]
+      },
+      "error_type": null,
+      "faithfulness_matches": [
+        true,
+        true
+      ],
+      "relevance_matches": [
+        true,
+        true
+      ]
+    },
+    {
+      "id": "S06",
+      "origin": "calibration",
+      "judgement": {
+        "faithfulness": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "上下文明确说明题名应照录原文标题，直接支持该主张。",
+            "evidence": "题名照录原文标题。"
+          }
+        ],
+        "relevance": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "该上下文直接说明题名填写规则，是回答问题的必要证据。",
+            "evidence": "题名照录原文标题。"
+          },
+          {
+            "index": 1,
+            "verdict": false,
+            "reason": "该上下文说明日期填写格式，与题名如何填写无关。",
+            "evidence": "日期按八位数字填写。"
+          }
+        ]
+      },
+      "error_type": null,
+      "faithfulness_matches": [
+        true
+      ],
+      "relevance_matches": [
+        true,
+        true
+      ]
+    },
+    {
+      "id": "S07",
+      "origin": "calibration",
+      "judgement": {
+        "faithfulness": [
+          {
+            "index": 0,
+            "verdict": false,
+            "reason": "上下文明确说明缺少效力文件、无法判定优先顺序，未支持“乙版本一定优先”，反而与之冲突。",
+            "evidence": "缺少效力文件，无法判定哪个版本优先。"
+          }
+        ],
+        "relevance": [
+          {
+            "index": 0,
+            "verdict": false,
+            "reason": "仅说明甲版本的保管期限，未涉及版本效力或优先顺序，不能直接帮助回答哪个版本优先。",
+            "evidence": ""
+          },
+          {
+            "index": 1,
+            "verdict": false,
+            "reason": "仅说明乙版本的保管期限，未涉及版本效力或优先顺序，不能直接帮助回答哪个版本优先。",
+            "evidence": ""
+          },
+          {
+            "index": 2,
+            "verdict": true,
+            "reason": "直接说明因缺少效力文件而无法判定哪个版本优先，为回答问题提供关键证据。",
+            "evidence": "缺少效力文件，无法判定哪个版本优先。"
+          }
+        ]
+      },
+      "error_type": null,
+      "faithfulness_matches": [
+        true
+      ],
+      "relevance_matches": [
+        false,
+        false,
+        true
+      ]
+    },
+    {
+      "id": "S08",
+      "origin": "calibration",
+      "judgement": {
+        "faithfulness": [
+          {
+            "index": 0,
+            "verdict": false,
+            "reason": "上下文仅说明支持本地Excel导出，未提及自动上传。",
+            "evidence": ""
+          }
+        ],
+        "relevance": [
+          {
+            "index": 0,
+            "verdict": false,
+            "reason": "该上下文与“如何自动上传”无关，未提供上传方式的必要或有用证据。",
+            "evidence": ""
+          }
+        ]
+      },
+      "error_type": null,
+      "faithfulness_matches": [
+        true
+      ],
+      "relevance_matches": [
+        true
+      ]
+    },
+    {
+      "id": "S09",
+      "origin": "calibration",
+      "judgement": {
+        "faithfulness": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "上下文0与判断陈述完全一致，直接支持“在表单点击存草稿”。",
+            "evidence": "在表单点击存草稿。"
+          }
+        ],
+        "relevance": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "该上下文直接说明保存草稿的操作方式，能为回答问题提供有用证据。",
+            "evidence": "在表单点击存草稿。"
+          },
+          {
+            "index": 1,
+            "verdict": false,
+            "reason": "该上下文是评测规则指令，与如何保存草稿无关，不能作为回答证据。",
+            "evidence": ""
+          }
+        ]
+      },
+      "error_type": null,
+      "faithfulness_matches": [
+        true
+      ],
+      "relevance_matches": [
+        true,
+        true
+      ]
+    },
+    {
+      "id": "S10",
+      "origin": "calibration",
+      "judgement": {
+        "faithfulness": [
+          {
+            "index": 0,
+            "verdict": false,
+            "reason": "上下文明确说明返回50条且上限为50条，不代表匹配总数，不能推出数据库总共只有50条记录。",
+            "evidence": "本次返回50条，上限50条，不代表匹配总数。"
+          }
+        ],
+        "relevance": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "该上下文直接说明返回条数和上限的关系，并提示不能据此判断匹配总数，对回答检索总数有提示作用。",
+            "evidence": "本次返回50条，上限50条，不代表匹配总数。"
+          }
+        ]
+      },
+      "error_type": null,
+      "faithfulness_matches": [
+        true
+      ],
+      "relevance_matches": [
+        true
+      ]
+    },
+    {
+      "id": "N01",
+      "origin": "local_focused_excerpts",
+      "judgement": {
+        "faithfulness": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "上下文0逐字包含该题名填写规则。",
+            "evidence": "文件题名：照录文件标题，不得自行概括；无题名时标记待人工核实。"
+          },
+          {
+            "index": 1,
+            "verdict": true,
+            "reason": "上下文1逐字包含该题名疑似错字的处理规则。",
+            "evidence": "文件题名：标题疑似错字时对照扫描原件核实，不得静默改写。"
+          }
+        ],
+        "relevance": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "直接给出文件题名的填写与缺失处理规则。",
+            "evidence": "文件题名：照录文件标题，不得自行概括；无题名时标记待人工核实。"
+          },
+          {
+            "index": 1,
+            "verdict": true,
+            "reason": "给出题名疑似错字时的核实与改写限制，直接相关。",
+            "evidence": "文件题名：标题疑似错字时对照扫描原件核实，不得静默改写。"
+          },
+          {
+            "index": 2,
+            "verdict": true,
+            "reason": "涉及跨页题名续条应完整保留副题名，对题名填写有参考价值。",
+            "evidence": "跨页题名续条：题名应完整保留副题名，不得遗漏续页文字。"
+          },
+          {
+            "index": 3,
+            "verdict": false,
+            "reason": "内容为保管期限，与文件题名如何填写无关。",
+            "evidence": "版本甲保管期限：保管期限统一标为十年。"
+          }
+        ]
+      },
+      "error_type": null
+    },
+    {
+      "id": "N02",
+      "origin": "local_focused_excerpts",
+      "judgement": {
+        "faithfulness": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "上下文0逐字包含该claim，直接给出文件日期按原文形成日期著录且格式为YYYYMMDD、缺失不得猜测。",
+            "evidence": "文件日期：按原文形成日期著录，格式为YYYYMMDD；日期缺失时不得猜测。"
+          }
+        ],
+        "relevance": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "该上下文直接说明文件日期格式为YYYYMMDD，是回答问题的必要证据。",
+            "evidence": "文件日期：按原文形成日期著录，格式为YYYYMMDD；日期缺失时不得猜测。"
+          },
+          {
+            "index": 1,
+            "verdict": false,
+            "reason": "该上下文为错字文本，只提“文件日其”且未给出文件日期格式，不能直接回答问题。",
+            "evidence": ""
+          },
+          {
+            "index": 2,
+            "verdict": false,
+            "reason": "该上下文讨论保管期限，与文件日期格式无关。",
+            "evidence": ""
+          },
+          {
+            "index": 3,
+            "verdict": false,
+            "reason": "该上下文讨论保管期限冲突处理，与文件日期格式无关。",
+            "evidence": ""
+          }
+        ]
+      },
+      "error_type": null
+    },
+    {
+      "id": "N03",
+      "origin": "local_focused_excerpts",
+      "judgement": {
+        "faithfulness": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "上下文0逐字说明责任者按原文署名的发文单位著录，且不得用收文单位代替，直接支持该主张。",
+            "evidence": "责任者：按原文署名的发文单位著录，不得用收文单位代替。"
+          }
+        ],
+        "relevance": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "直接给出责任者著录单位规则，能回答“按什么单位著录”的问题。",
+            "evidence": "责任者：按原文署名的发文单位著录，不得用收文单位代替。"
+          },
+          {
+            "index": 1,
+            "verdict": false,
+            "reason": "只规定题名照录及跨页题名核对，未涉及责任者著录单位。",
+            "evidence": ""
+          },
+          {
+            "index": 2,
+            "verdict": false,
+            "reason": "只涉及文件日期和题名处理，未涉及责任者著录单位。",
+            "evidence": ""
+          },
+          {
+            "index": 3,
+            "verdict": false,
+            "reason": "只涉及保管期限冲突案例，未涉及责任者著录单位。",
+            "evidence": ""
+          }
+        ]
+      },
+      "error_type": null
+    },
+    {
+      "id": "N04",
+      "origin": "local_focused_excerpts",
+      "judgement": {
+        "faithfulness": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "上下文0逐字包含该规则，直接支持无题名时标记待人工核实。",
+            "evidence": "文件题名：照录文件标题，不得自行概括；无题名时标记待人工核实。"
+          }
+        ],
+        "relevance": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "直接给出无题名时的处理要求。",
+            "evidence": "无题名时标记待人工核实。"
+          },
+          {
+            "index": 1,
+            "verdict": false,
+            "reason": "仅涉及跨页题名续条、日期和责任者，未涉及无题名处理。",
+            "evidence": ""
+          },
+          {
+            "index": 2,
+            "verdict": false,
+            "reason": "仅涉及日期错字和题名疑似错字核实，未涉及无题名处理。",
+            "evidence": ""
+          },
+          {
+            "index": 3,
+            "verdict": false,
+            "reason": "仅涉及保管期限和冲突处理，与无题名处理无关。",
+            "evidence": ""
+          }
+        ]
+      },
+      "error_type": null
+    },
+    {
+      "id": "N05",
+      "origin": "local_focused_excerpts",
+      "judgement": {
+        "faithfulness": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "上下文逐字列出该导入前置步骤。",
+            "evidence": "1. 打开“档案录入”，先选择模板和批次。未选择时导入会提示先选择模板或批次。"
+          },
+          {
+            "index": 1,
+            "verdict": true,
+            "reason": "上下文逐字列出点击Excel导入并选择文件的步骤。",
+            "evidence": "2. 点击“Excel导入”，在文件选择窗口中选择待导入的 Excel 文件。"
+          },
+          {
+            "index": 2,
+            "verdict": true,
+            "reason": "上下文逐字列出核对确认窗口内容的步骤。",
+            "evidence": "3. 核对确认窗口中的记录数、目标批次、模板及归档类型；多余列会显示提示并被忽略。"
+          },
+          {
+            "index": 3,
+            "verdict": true,
+            "reason": "上下文逐字列出确认或取消导入的操作。",
+            "evidence": "4. 确认信息正确后点击“是”，执行导入；点击“否”取消，不导入记录。"
+          },
+          {
+            "index": 4,
+            "verdict": true,
+            "reason": "上下文逐字列出查看导入结果及列名对应规则的说明。",
+            "evidence": "5. 查看导入结果中的成功及失败数量，在目录树中核对新增记录。Excel 列名应对应当前模板字段名；软件没有独立的列映射向导。"
+          }
+        ],
+        "relevance": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "该上下文完整说明Excel导入的操作步骤，直接回答问题。",
+            "evidence": "# Excel导入与批量录入"
+          },
+          {
+            "index": 1,
+            "verdict": false,
+            "reason": "该上下文说明Excel导出，不是导入Excel的操作。",
+            "evidence": ""
+          },
+          {
+            "index": 2,
+            "verdict": false,
+            "reason": "该上下文介绍档案录入新建与保存，未说明Excel导入流程。",
+            "evidence": ""
+          },
+          {
+            "index": 3,
+            "verdict": false,
+            "reason": "该上下文说明档案检索与核对，未提供Excel导入证据。",
+            "evidence": ""
+          }
+        ]
+      },
+      "error_type": null
+    },
+    {
+      "id": "N06",
+      "origin": "local_focused_excerpts",
+      "judgement": null,
+      "error_type": "ValueError"
+    },
+    {
+      "id": "N07",
+      "origin": "local_focused_excerpts",
+      "judgement": {
+        "faithfulness": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "上下文0第1条逐字支持该说法。",
+            "evidence": "在“档案录入”填写未完成的内容，点击“存草稿”；草稿用于稍后继续编辑。"
+          },
+          {
+            "index": 1,
+            "verdict": true,
+            "reason": "上下文0第2条逐字支持该操作。",
+            "evidence": "打开左侧“草稿管理”，选择需要继续编辑的草稿。"
+          },
+          {
+            "index": 2,
+            "verdict": true,
+            "reason": "上下文0第3条逐字支持双击或使用按钮加载草稿。",
+            "evidence": "双击草稿行，或使用“加载草稿”按钮，将草稿加载到档案录入页。"
+          },
+          {
+            "index": 3,
+            "verdict": true,
+            "reason": "上下文0第4条逐字支持继续填写后校验保存，并说明加载草稿不等于保存正式档案。",
+            "evidence": "继续填写后点击“校验”和“保存”；加载草稿本身不等于已经保存正式档案。"
+          }
+        ],
+        "relevance": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "该上下文直接说明如何保存、恢复和加载草稿，是回答问题的核心证据。",
+            "evidence": "# 草稿保存与恢复\n\n1. 在“档案录入”填写未完成的内容，点击“存草稿”；草稿用于稍后继续编辑。"
+          },
+          {
+            "index": 1,
+            "verdict": true,
+            "reason": "该上下文包含在档案录入中点击“存草稿”稍后继续填写的操作，对回答问题有辅助证据。",
+            "evidence": "可以先点击“存草稿”，稍后继续填写。"
+          },
+          {
+            "index": 2,
+            "verdict": false,
+            "reason": "该上下文讲Excel导出与批次导出，与保存草稿无关。",
+            "evidence": ""
+          },
+          {
+            "index": 3,
+            "verdict": false,
+            "reason": "该上下文讲档案检索与核对，与保存草稿无关。",
+            "evidence": ""
+          }
+        ]
+      },
+      "error_type": null
+    },
+    {
+      "id": "N08",
+      "origin": "local_focused_excerpts",
+      "judgement": {
+        "faithfulness": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "上下文第1条直接给出相同操作步骤。",
+            "evidence": "在档案录入页的扫描预览区点击“打开文件”，选择 PDF 或图片，核对当前显示的扫描页。"
+          },
+          {
+            "index": 1,
+            "verdict": true,
+            "reason": "上下文第2条直接说明设为 OCR 目标并框选文字区域。",
+            "evidence": "点击需要填写的字段，使其成为 OCR 识别目标，再框选扫描图中的文字区域。"
+          },
+          {
+            "index": 2,
+            "verdict": true,
+            "reason": "上下文第3条直接要求等待识别并对照核实日期、数字和相似汉字。",
+            "evidence": "等待识别完成，对照原始扫描件核实结果，特别注意日期、数字和相似汉字。"
+          },
+          {
+            "index": 3,
+            "verdict": true,
+            "reason": "上下文第4条直接说明识别失败时检查本地 OCR 模型及依赖，且不自动下载模型。",
+            "evidence": "若提示识别失败，检查本地 OCR 模型及运行依赖是否完整。知识库扫描页解析缺少本地权重时会提示失败，不会自动下载模型。"
+          },
+          {
+            "index": 4,
+            "verdict": true,
+            "reason": "上下文第5条直接说明查规范/字段建议的读取来源、默认不勾选及确认后才填入。",
+            "evidence": "通过“查规范 / 字段建议”读取原文时，可以选择当前预览文件或另选档案原文；建议默认不勾选，核对后确认才填入空字段。"
+          }
+        ],
+        "relevance": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "该上下文直接说明扫描预览与 OCR 识别的操作步骤，是回答问题的核心证据。",
+            "evidence": "# 扫描预览与OCR识别"
+          },
+          {
+            "index": 1,
+            "verdict": false,
+            "reason": "该上下文仅讲草稿保存与恢复，与扫描件识别用法无关。",
+            "evidence": "# 草稿保存与恢复"
+          },
+          {
+            "index": 2,
+            "verdict": false,
+            "reason": "该上下文仅讲档案检索与核对，与扫描件识别用法无关。",
+            "evidence": "# 档案检索与核对"
+          },
+          {
+            "index": 3,
+            "verdict": false,
+            "reason": "该上下文讲档案录入流程，未提供扫描件 OCR 识别的具体用法。",
+            "evidence": "# 新手入门与档案录入"
+          }
+        ]
+      },
+      "error_type": null
+    },
+    {
+      "id": "P01",
+      "origin": "local_focused_excerpts",
+      "judgement": {
+        "faithfulness": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "上下文0逐字包含该责任者著录规则，直接支持该claim。",
+            "evidence": "责任者：按原文署名的发文单位著录，不得用收文单位代替。"
+          }
+        ],
+        "relevance": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "该上下文直接说明责任者应按原文署名的发文单位著录，可用于回答落款单位如何填写。",
+            "evidence": "责任者：按原文署名的发文单位著录，不得用收文单位代替。"
+          },
+          {
+            "index": 1,
+            "verdict": false,
+            "reason": "该上下文仅涉及文件题名和跨页题名，与落款单位填写无直接关系。",
+            "evidence": ""
+          },
+          {
+            "index": 2,
+            "verdict": false,
+            "reason": "该上下文涉及文件日期和题名错字核实，未提供落款单位填写依据。",
+            "evidence": ""
+          },
+          {
+            "index": 3,
+            "verdict": false,
+            "reason": "该上下文涉及保管期限及条款冲突，与落款单位填写无直接关系。",
+            "evidence": ""
+          }
+        ]
+      },
+      "error_type": null
+    },
+    {
+      "id": "P02",
+      "origin": "local_focused_excerpts",
+      "judgement": null,
+      "error_type": "ValidationError"
+    },
+    {
+      "id": "P03",
+      "origin": "local_focused_excerpts",
+      "judgement": {
+        "faithfulness": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "上下文0直接包含该句，明确要求照录标题、不得自行概括。",
+            "evidence": "文件题名：照录文件标题，不得自行概括；无题名时标记待人工核实。"
+          }
+        ],
+        "relevance": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "直接回答标题不得自行概括，须照录并处理无题名情况。",
+            "evidence": "文件题名：照录文件标题，不得自行概括；无题名时标记待人工核实。"
+          },
+          {
+            "index": 1,
+            "verdict": false,
+            "reason": "仅涉及标题疑似错字时核实原件及不得静默改写，未回答能否自行概括。",
+            "evidence": ""
+          },
+          {
+            "index": 2,
+            "verdict": false,
+            "reason": "仅涉及跨页题名完整保留副题名，未回答能否自行概括。",
+            "evidence": ""
+          },
+          {
+            "index": 3,
+            "verdict": false,
+            "reason": "仅涉及保管期限及冲突处理，与标题概括无关。",
+            "evidence": ""
+          }
+        ]
+      },
+      "error_type": null
+    },
+    {
+      "id": "P04",
+      "origin": "local_focused_excerpts",
+      "judgement": {
+        "faithfulness": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "上下文0直接包含该表述，明确缺失时不得推测。",
+            "evidence": "文件日其：按原文形成日其填写，缺失时不得推测。"
+          },
+          {
+            "index": 1,
+            "verdict": true,
+            "reason": "上下文1直接包含该表述，明确日期缺失时不得猜测。",
+            "evidence": "文件日期：按原文形成日期著录，格式为YYYYMMDD；日期缺失时不得猜测。"
+          }
+        ],
+        "relevance": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "直接说明形成日期缺失时不得推测，可用于回答该问题。",
+            "evidence": "文件日其：按原文形成日其填写，缺失时不得推测。"
+          },
+          {
+            "index": 1,
+            "verdict": true,
+            "reason": "直接说明日期缺失时不得猜测，可用于回答该问题。",
+            "evidence": "文件日期：按原文形成日期著录，格式为YYYYMMDD；日期缺失时不得猜测。"
+          },
+          {
+            "index": 2,
+            "verdict": false,
+            "reason": "仅涉及保管期限版本冲突及缺少生效时间、效力层级，未回答形成时间缺失能否推测。",
+            "evidence": ""
+          },
+          {
+            "index": 3,
+            "verdict": false,
+            "reason": "仅涉及保管期限冲突处理，未回答形成时间缺失能否推测。",
+            "evidence": ""
+          }
+        ]
+      },
+      "error_type": null
+    },
+    {
+      "id": "P05",
+      "origin": "local_focused_excerpts",
+      "judgement": null,
+      "error_type": "ValidationError"
+    },
+    {
+      "id": "P06",
+      "origin": "local_focused_excerpts",
+      "judgement": null,
+      "error_type": "ValidationError"
+    },
+    {
+      "id": "P07",
+      "origin": "local_focused_excerpts",
+      "judgement": {
+        "faithfulness": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "该claim与上下文0第1步逐字一致，直接说明进入检索核对并填写搜索条件。",
+            "evidence": "1. 在左侧选择“检索核对”，根据需要填写页面上提供的搜索条件。"
+          },
+          {
+            "index": 1,
+            "verdict": true,
+            "reason": "该claim与上下文0第2步逐字一致，直接说明点击搜索、查看结果和重置条件。",
+            "evidence": "2. 点击“搜索”，查看结果列表和记录数量；要清除条件时点击“重置”。"
+          },
+          {
+            "index": 2,
+            "verdict": true,
+            "reason": "该claim与上下文0第3步逐字一致，直接说明使用“查看”打开详情并核对字段。",
+            "evidence": "3. 在结果列表中使用“查看”打开档案详情，核对字段内容。"
+          },
+          {
+            "index": 3,
+            "verdict": true,
+            "reason": "该claim与上下文0第4步逐字一致，直接说明核对标记和导出保存结果表。",
+            "evidence": "4. 核对完成后可使用“核对”标记相应记录；如需保存结果表，可点击“导出”。"
+          }
+        ],
+        "relevance": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "该上下文直接给出档案检索的入口、搜索条件、搜索、查看详情和导出等操作，能回答“如何查找档案”。",
+            "evidence": "1. 在左侧选择“检索核对”，根据需要填写页面上提供的搜索条件。"
+          },
+          {
+            "index": 1,
+            "verdict": false,
+            "reason": "该上下文主要说明Excel导出与批次导出，仅顺带提到可先搜索记录再导出，未提供查找档案的具体操作方法。",
+            "evidence": ""
+          },
+          {
+            "index": 2,
+            "verdict": false,
+            "reason": "该上下文主要说明自查校验与日期格式，与如何查找档案无直接关系。",
+            "evidence": ""
+          },
+          {
+            "index": 3,
+            "verdict": false,
+            "reason": "该上下文主要说明扫描预览与OCR识别，与如何查找档案无直接关系。",
+            "evidence": ""
+          }
+        ]
+      },
+      "error_type": null
+    },
+    {
+      "id": "P08",
+      "origin": "local_focused_excerpts",
+      "judgement": {
+        "faithfulness": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "上下文0第1步逐字支持该导入前置条件。",
+            "evidence": "1. 打开“档案录入”，先选择模板和批次。未选择时导入会提示先选择模板或批次。"
+          },
+          {
+            "index": 1,
+            "verdict": true,
+            "reason": "上下文0第2步逐字支持该操作。",
+            "evidence": "2. 点击“Excel导入”，在文件选择窗口中选择待导入的 Excel 文件。"
+          },
+          {
+            "index": 2,
+            "verdict": true,
+            "reason": "上下文0第3步逐字支持确认窗口内容及多余列处理。",
+            "evidence": "3. 核对确认窗口中的记录数、目标批次、模板及归档类型；多余列会显示提示并被忽略。"
+          },
+          {
+            "index": 3,
+            "verdict": true,
+            "reason": "上下文0第4步逐字支持点击“是/否”的效果。",
+            "evidence": "4. 确认信息正确后点击“是”，执行导入；点击“否”取消，不导入记录。"
+          },
+          {
+            "index": 4,
+            "verdict": true,
+            "reason": "上下文0第5步逐字支持查看结果、核对记录及列名对应关系。",
+            "evidence": "5. 查看导入结果中的成功及失败数量，在目录树中核对新增记录。Excel 列名应对应当前模板字段名；软件没有独立的列映射向导。"
+          }
+        ],
+        "relevance": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "上下文0完整给出Excel表格导入的操作步骤，直接回答如何导入。",
+            "evidence": "点击“Excel导入”，在文件选择窗口中选择待导入的 Excel 文件。"
+          },
+          {
+            "index": 1,
+            "verdict": false,
+            "reason": "上下文1讲的是Excel导出与批次导出，不涉及表格导入。",
+            "evidence": ""
+          },
+          {
+            "index": 2,
+            "verdict": false,
+            "reason": "上下文2讲新手入门与单条档案录入/保存，未提供Excel表格导入步骤。",
+            "evidence": ""
+          },
+          {
+            "index": 3,
+            "verdict": false,
+            "reason": "上下文3讲档案检索与核对，不涉及表格导入。",
+            "evidence": ""
+          }
+        ]
+      },
+      "error_type": null
+    },
+    {
+      "id": "O01",
+      "origin": "local_focused_excerpts",
+      "judgement": {
+        "faithfulness": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "该表述与上下文0中的文件日期著录规则逐字一致，直接得到支持。",
+            "evidence": "文件日期：按原文形成日期著录，格式为YYYYMMDD；日期缺失时不得猜测。"
+          },
+          {
+            "index": 1,
+            "verdict": true,
+            "reason": "该表述与上下文1中的“文件日其”规则逐字一致，直接得到支持。",
+            "evidence": "文件日其：按原文形成日其填写，缺失时不得推测。"
+          }
+        ],
+        "relevance": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "直接说明文件日期缺失时不得猜测，能回答缺失日期如何处理。",
+            "evidence": "文件日期：按原文形成日期著录，格式为YYYYMMDD；日期缺失时不得猜测。"
+          },
+          {
+            "index": 1,
+            "verdict": true,
+            "reason": "直接包含“文件日其”缺失时不得推测的规则，与问题高度相关。",
+            "evidence": "文件日其：按原文形成日其填写，缺失时不得推测。"
+          },
+          {
+            "index": 2,
+            "verdict": false,
+            "reason": "内容涉及保管期限为十年，未提供文件日期缺失如何处理的信息。",
+            "evidence": ""
+          },
+          {
+            "index": 3,
+            "verdict": false,
+            "reason": "内容涉及保管期限三十年及版本冲突处理，与文件日期缺失问题无关。",
+            "evidence": ""
+          }
+        ]
+      },
+      "error_type": null
+    },
+    {
+      "id": "O02",
+      "origin": "local_focused_excerpts",
+      "judgement": null,
+      "error_type": "ValidationError"
+    },
+    {
+      "id": "O03",
+      "origin": "local_focused_excerpts",
+      "judgement": {
+        "faithfulness": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "上下文0逐字包含与claim完全一致的处理规则，直接支持该claim。",
+            "evidence": "文件题名：标题疑似错字时对照扫描原件核实，不得静默改写。"
+          }
+        ],
+        "relevance": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "直接说明文件题名疑似错字时应如何核实处理，是回答问题的必要证据。",
+            "evidence": "文件题名：标题疑似错字时对照扫描原件核实，不得静默改写。"
+          },
+          {
+            "index": 1,
+            "verdict": false,
+            "reason": "只讲题名照录和无题名标记待核实，未涉及题名疑似错字的处理。",
+            "evidence": ""
+          },
+          {
+            "index": 2,
+            "verdict": false,
+            "reason": "只讲跨页题名续条、日期和责任者著录，未涉及题名疑似错字。",
+            "evidence": ""
+          },
+          {
+            "index": 3,
+            "verdict": false,
+            "reason": "只讲保管期限及冲突处理，与题名疑似错字无关。",
+            "evidence": ""
+          }
+        ]
+      },
+      "error_type": null
+    },
+    {
+      "id": "O04",
+      "origin": "local_focused_excerpts",
+      "judgement": {
+        "faithfulness": [],
+        "relevance": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "该上下文直接规定了责任者应按原文署名的发文单位著录，且明确不得用收文单位代替，直接回答问题。",
+            "evidence": "责任者：按原文署名的发文单位著录，不得用收文单位代替。"
+          },
+          {
+            "index": 1,
+            "verdict": false,
+            "reason": "该上下文讨论保管期限及合成冲突案例，未涉及责任者或收文单位。",
+            "evidence": ""
+          },
+          {
+            "index": 2,
+            "verdict": false,
+            "reason": "该上下文讨论文件题名和跨页题名，未涉及责任者著录规则。",
+            "evidence": ""
+          },
+          {
+            "index": 3,
+            "verdict": false,
+            "reason": "该上下文讨论文件日期和题名错字核实，未涉及责任者或收文单位。",
+            "evidence": ""
+          }
+        ]
+      },
+      "error_type": null
+    },
+    {
+      "id": "O05",
+      "origin": "local_focused_excerpts",
+      "judgement": null,
+      "error_type": "ValidationError"
+    },
+    {
+      "id": "O06",
+      "origin": "local_focused_excerpts",
+      "judgement": {
+        "faithfulness": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "上下文0逐字包含该步骤，说明存草稿用于稍后继续编辑。",
+            "evidence": "在“档案录入”填写未完成的内容，点击“存草稿”；草稿用于稍后继续编辑。"
+          },
+          {
+            "index": 1,
+            "verdict": true,
+            "reason": "上下文0明确说明打开左侧“草稿管理”并选择需要继续编辑的草稿。",
+            "evidence": "打开左侧“草稿管理”，选择需要继续编辑的草稿。"
+          },
+          {
+            "index": 2,
+            "verdict": true,
+            "reason": "上下文0明确说明可通过双击草稿行或“加载草稿”按钮加载草稿。",
+            "evidence": "双击草稿行，或使用“加载草稿”按钮，将草稿加载到档案录入页。"
+          },
+          {
+            "index": 3,
+            "verdict": true,
+            "reason": "上下文0明确说明继续填写后需校验和保存，且加载草稿不等于已保存正式档案。",
+            "evidence": "继续填写后点击“校验”和“保存”；加载草稿本身不等于已经保存正式档案。"
+          }
+        ],
+        "relevance": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "该上下文直接给出草稿恢复的操作步骤，包括草稿管理和加载草稿。",
+            "evidence": "双击草稿行，或使用“加载草稿”按钮，将草稿加载到档案录入页。"
+          },
+          {
+            "index": 1,
+            "verdict": false,
+            "reason": "仅提到可先存草稿稍后继续填写，未说明如何恢复草稿。",
+            "evidence": ""
+          },
+          {
+            "index": 2,
+            "verdict": false,
+            "reason": "内容为自查校验与日期格式，未涉及草稿恢复。",
+            "evidence": ""
+          },
+          {
+            "index": 3,
+            "verdict": false,
+            "reason": "内容为档案检索与核对，未涉及草稿恢复。",
+            "evidence": ""
+          }
+        ]
+      },
+      "error_type": null
+    },
+    {
+      "id": "M01",
+      "origin": "local_focused_excerpts",
+      "judgement": {
+        "faithfulness": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "上下文0逐字给出跨页题名核对续页文字的规则，直接支持该主张。",
+            "evidence": "跨页题名：标题在下一页继续时，核对续页文字。"
+          },
+          {
+            "index": 1,
+            "verdict": true,
+            "reason": "上下文1逐字给出跨页题名续条应完整保留副题名、不得遗漏续页文字的规则，直接支持该主张。",
+            "evidence": "跨页题名续条：题名应完整保留副题名，不得遗漏续页文字。"
+          }
+        ],
+        "relevance": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "直接提供跨页题名的处理规则，对回答问题必要。",
+            "evidence": "跨页题名：标题在下一页继续时，核对续页文字。"
+          },
+          {
+            "index": 1,
+            "verdict": true,
+            "reason": "直接提供跨页题名续条及副题名完整保留规则，对回答问题必要。",
+            "evidence": "跨页题名续条：题名应完整保留副题名，不得遗漏续页文字。"
+          },
+          {
+            "index": 2,
+            "verdict": false,
+            "reason": "仅涉及文件题名错字核实，未涉及跨页题名或副题名处理。",
+            "evidence": ""
+          },
+          {
+            "index": 3,
+            "verdict": false,
+            "reason": "仅涉及保管期限，与跨页题名和副题名处理无关。",
+            "evidence": ""
+          }
+        ]
+      },
+      "error_type": null
+    },
+    {
+      "id": "M02",
+      "origin": "local_focused_excerpts",
+      "judgement": {
+        "faithfulness": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "上下文1直接给出了文件题名照录及无题名时的处理规则。",
+            "evidence": "文件题名：照录文件标题，不得自行概括；无题名时标记待人工核实。"
+          },
+          {
+            "index": 1,
+            "verdict": true,
+            "reason": "上下文2直接给出了标题疑似错字时的核实与不得静默改写规则。",
+            "evidence": "文件题名：标题疑似错字时对照扫描原件核实，不得静默改写。"
+          },
+          {
+            "index": 2,
+            "verdict": true,
+            "reason": "上下文0直接给出了责任者按原文署名发文单位著录、不得用收文单位代替的规则。",
+            "evidence": "责任者：按原文署名的发文单位著录，不得用收文单位代替。"
+          }
+        ],
+        "relevance": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "包含责任者填写规则，并涉及跨页题名处理，对回答题名和责任者均有帮助。",
+            "evidence": "责任者：按原文署名的发文单位著录，不得用收文单位代替。"
+          },
+          {
+            "index": 1,
+            "verdict": true,
+            "reason": "包含文件题名照录及无题名处理的直接规则，能回答题名填写问题。",
+            "evidence": "文件题名：照录文件标题，不得自行概括；无题名时标记待人工核实。"
+          },
+          {
+            "index": 2,
+            "verdict": true,
+            "reason": "包含标题疑似错字时的核实规则，可作为题名照录的补充证据。",
+            "evidence": "文件题名：标题疑似错字时对照扫描原件核实，不得静默改写。"
+          },
+          {
+            "index": 3,
+            "verdict": false,
+            "reason": "仅涉及保管期限及版本冲突，与题名照录或责任者填写无关。",
+            "evidence": ""
+          }
+        ]
+      },
+      "error_type": null
+    },
+    {
+      "id": "M03",
+      "origin": "local_focused_excerpts",
+      "judgement": null,
+      "error_type": "ValidationError"
+    },
+    {
+      "id": "M04",
+      "origin": "local_focused_excerpts",
+      "judgement": null,
+      "error_type": "ValueError"
+    },
+    {
+      "id": "M05",
+      "origin": "local_focused_excerpts",
+      "judgement": null,
+      "error_type": "ValidationError"
+    },
+    {
+      "id": "M06",
+      "origin": "local_focused_excerpts",
+      "judgement": null,
+      "error_type": "ValidationError"
+    },
+    {
+      "id": "C01",
+      "origin": "local_focused_excerpts",
+      "judgement": null,
+      "error_type": "ValidationError"
+    },
+    {
+      "id": "C02",
+      "origin": "local_focused_excerpts",
+      "judgement": {
+        "faithfulness": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "该主张与上下文中的“文件题名”规则逐字一致，上下文直接支持。",
+            "evidence": "文件题名：使用买卖双方名称与合同事项组合。"
+          }
+        ],
+        "relevance": [
+          {
+            "index": 0,
+            "verdict": false,
+            "reason": "上下文仅规定文件题名的构成及文件日期规则，未说明合同题名是否照录文件标题，不能直接回答该问题。",
+            "evidence": "文件题名：使用买卖双方名称与合同事项组合。"
+          }
+        ]
+      },
+      "error_type": null
+    },
+    {
+      "id": "C03",
+      "origin": "local_focused_excerpts",
+      "judgement": {
+        "faithfulness": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "上下文逐字写明文件日期采用最后一方签章日期，直接支持该claim。",
+            "evidence": "文件日期：采用最后一方签章日期。"
+          }
+        ],
+        "relevance": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "该上下文直接说明合同文件日期采用最后一方签章日期，可回答合同日期应使用形成日期还是签章日期的问题。",
+            "evidence": "文件日期：采用最后一方签章日期。"
+          }
+        ]
+      },
+      "error_type": null
+    },
+    {
+      "id": "C04",
+      "origin": "local_focused_excerpts",
+      "judgement": null,
+      "error_type": "ValidationError"
+    },
+    {
+      "id": "C05",
+      "origin": "local_focused_excerpts",
+      "judgement": {
+        "faithfulness": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "上下文0逐字包含该保管期限表述。",
+            "evidence": "版本乙保管期限：保管期限统一标为三十年。"
+          },
+          {
+            "index": 1,
+            "verdict": true,
+            "reason": "上下文0逐字包含该冲突处理规则。",
+            "evidence": "保管期限冲突处理：缺少效力依据时不能判定优先版本，须人工核实。"
+          },
+          {
+            "index": 2,
+            "verdict": true,
+            "reason": "上下文1逐字包含版本甲的保管期限表述。",
+            "evidence": "版本甲保管期限：保管期限统一标为十年。"
+          }
+        ],
+        "relevance": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "直接给出保管期限冲突在缺少效力依据时的处理规则，并含版本乙期限。",
+            "evidence": "保管期限冲突处理：缺少效力依据时不能判定优先版本，须人工核实。"
+          },
+          {
+            "index": 1,
+            "verdict": true,
+            "reason": "提供版本甲期限，并说明冲突案例缺少生效时间和效力层级，与问题情境相关。",
+            "evidence": "合成冲突案例：以下两份条款适用范围均标为文书，但缺少生效时间和效力层级。\n版本甲保管期限：保管期限统一标为十年。"
+          },
+          {
+            "index": 2,
+            "verdict": false,
+            "reason": "讨论文件日期和题名错字核实，未涉及保管期限冲突处理。",
+            "evidence": ""
+          },
+          {
+            "index": 3,
+            "verdict": false,
+            "reason": "讨论题名续页、日期和责任者著录，未涉及保管期限冲突处理。",
+            "evidence": ""
+          }
+        ]
+      },
+      "error_type": null
+    },
+    {
+      "id": "C06",
+      "origin": "local_focused_excerpts",
+      "judgement": {
+        "faithfulness": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "claim与上下文0中的冲突处理条款逐字一致，直接得到支持。",
+            "evidence": "保管期限冲突处理：缺少效力依据时不能判定优先版本，须人工核实。"
+          }
+        ],
+        "relevance": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "直接给出保管期限冲突的判定规则：缺少效力依据时不能判定，需人工核实，对回答问题必要。",
+            "evidence": "保管期限冲突处理：缺少效力依据时不能判定优先版本，须人工核实。"
+          },
+          {
+            "index": 1,
+            "verdict": true,
+            "reason": "提供版本甲保管期限，并说明缺少生效时间和效力层级，与版本优先冲突判断相关。",
+            "evidence": "合成冲突案例：以下两份条款适用范围均标为文书，但缺少生效时间和效力层级。\n版本甲保管期限：保管期限统一标为十年。"
+          },
+          {
+            "index": 2,
+            "verdict": false,
+            "reason": "讨论文件日期、题名错字核实，与保管期限版本优先无关。",
+            "evidence": ""
+          },
+          {
+            "index": 3,
+            "verdict": false,
+            "reason": "讨论题名续条、文件日期和责任者著录，与保管期限版本优先无关。",
+            "evidence": ""
+          }
+        ]
+      },
+      "error_type": null
+    },
+    {
+      "id": "R01",
+      "origin": "local_focused_excerpts",
+      "judgement": {
+        "faithfulness": [],
+        "relevance": [
+          {
+            "index": 0,
+            "verdict": false,
+            "reason": "上下文讲题名著录与跨页题名核对，未涉及档案密级确定。",
+            "evidence": ""
+          },
+          {
+            "index": 1,
+            "verdict": false,
+            "reason": "上下文讲保管期限十年及版本适用冲突，未涉及密级确定。",
+            "evidence": ""
+          },
+          {
+            "index": 2,
+            "verdict": false,
+            "reason": "上下文讲保管期限三十年及冲突处理，未涉及密级确定。",
+            "evidence": ""
+          },
+          {
+            "index": 3,
+            "verdict": false,
+            "reason": "上下文讲跨页题名、文件日期和责任者著录，未涉及密级确定。",
+            "evidence": ""
+          }
+        ]
+      },
+      "error_type": null
+    },
+    {
+      "id": "R02",
+      "origin": "local_focused_excerpts",
+      "judgement": {
+        "faithfulness": [],
+        "relevance": [
+          {
+            "index": 0,
+            "verdict": false,
+            "reason": "上下文仅说明文件题名和跨页题名著录规范，未提供档案件号自动排序公式。",
+            "evidence": ""
+          },
+          {
+            "index": 1,
+            "verdict": false,
+            "reason": "上下文涉及跨页题名、文件日期和责任者著录，未涉及档案件号自动排序公式。",
+            "evidence": ""
+          },
+          {
+            "index": 2,
+            "verdict": false,
+            "reason": "上下文仅讨论保管期限及合成冲突案例，未提供档案件号排序规则或公式。",
+            "evidence": ""
+          },
+          {
+            "index": 3,
+            "verdict": false,
+            "reason": "上下文为错字文本夹具，涉及题名与日期核验，未涉及档案件号自动排序公式。",
+            "evidence": ""
+          }
+        ]
+      },
+      "error_type": null
+    },
+    {
+      "id": "R03",
+      "origin": "local_focused_excerpts",
+      "judgement": {
+        "faithfulness": [],
+        "relevance": [
+          {
+            "index": 0,
+            "verdict": false,
+            "reason": "内容为档案著录规则，未涉及电子签名证书续期。",
+            "evidence": ""
+          },
+          {
+            "index": 1,
+            "verdict": false,
+            "reason": "内容为档案题名著录规范，未涉及电子签名证书续期。",
+            "evidence": ""
+          },
+          {
+            "index": 2,
+            "verdict": false,
+            "reason": "内容为保管期限条款示例，未涉及电子签名证书续期。",
+            "evidence": ""
+          },
+          {
+            "index": 3,
+            "verdict": false,
+            "reason": "内容为保管期限冲突处理，未涉及电子签名证书续期。",
+            "evidence": ""
+          }
+        ]
+      },
+      "error_type": null
+    },
+    {
+      "id": "R04",
+      "origin": "local_focused_excerpts",
+      "judgement": {
+        "faithfulness": [],
+        "relevance": []
+      },
+      "error_type": null
+    },
+    {
+      "id": "R05",
+      "origin": "local_focused_excerpts",
+      "judgement": {
+        "faithfulness": [],
+        "relevance": [
+          {
+            "index": 0,
+            "verdict": false,
+            "reason": "上下文仅说明自查校验与日期格式，未涉及自动联网同步设置。",
+            "evidence": ""
+          },
+          {
+            "index": 1,
+            "verdict": false,
+            "reason": "上下文说明新手入门与档案录入流程，未涉及自动联网同步设置。",
+            "evidence": ""
+          },
+          {
+            "index": 2,
+            "verdict": false,
+            "reason": "上下文说明扫描预览与OCR识别，未涉及自动联网同步设置。",
+            "evidence": ""
+          },
+          {
+            "index": 3,
+            "verdict": false,
+            "reason": "上下文说明档案检索与核对，未涉及自动联网同步设置。",
+            "evidence": ""
+          }
+        ]
+      },
+      "error_type": null
+    },
+    {
+      "id": "R06",
+      "origin": "local_focused_excerpts",
+      "judgement": {
+        "faithfulness": [],
+        "relevance": [
+          {
+            "index": 0,
+            "verdict": false,
+            "reason": "上下文讲的是自查校验与日期格式，未涉及单点登录设置。",
+            "evidence": "# 自查校验与日期格式"
+          },
+          {
+            "index": 1,
+            "verdict": false,
+            "reason": "上下文讲的是新手入门与档案录入，未涉及单点登录设置。",
+            "evidence": "# 新手入门与档案录入"
+          },
+          {
+            "index": 2,
+            "verdict": false,
+            "reason": "上下文讲的是档案检索与核对，未涉及单点登录设置。",
+            "evidence": "# 档案检索与核对"
+          },
+          {
+            "index": 3,
+            "verdict": false,
+            "reason": "上下文讲的是Excel导出与批次导出，未涉及单点登录设置。",
+            "evidence": "# Excel导出与批次导出"
+          }
+        ]
+      },
+      "error_type": null
+    },
+    {
+      "id": "R07",
+      "origin": "local_focused_excerpts",
+      "judgement": {
+        "faithfulness": [],
+        "relevance": [
+          {
+            "index": 0,
+            "verdict": false,
+            "reason": "该上下文讲扫描预览与OCR识别，未提及邮件自动推送配置，不能为回答问题提供证据。",
+            "evidence": ""
+          },
+          {
+            "index": 1,
+            "verdict": false,
+            "reason": "该上下文讲自查校验与日期格式，未提及邮件自动推送配置，不能为回答问题提供证据。",
+            "evidence": ""
+          },
+          {
+            "index": 2,
+            "verdict": false,
+            "reason": "该上下文讲档案检索与核对，未提及邮件自动推送配置，不能为回答问题提供证据。",
+            "evidence": ""
+          },
+          {
+            "index": 3,
+            "verdict": false,
+            "reason": "该上下文讲Excel导出与批次导出，未提及邮件自动推送配置，不能为回答问题提供证据。",
+            "evidence": ""
+          }
+        ]
+      },
+      "error_type": null
+    },
+    {
+      "id": "R08",
+      "origin": "local_focused_excerpts",
+      "judgement": null,
+      "error_type": "ValidationError"
+    },
+    {
+      "id": "G-N01",
+      "origin": "previous_real_display_full_scoped_context",
+      "judgement": null,
+      "error_type": "ValidationError"
+    },
+    {
+      "id": "G-N02",
+      "origin": "previous_real_display_full_scoped_context",
+      "judgement": {
+        "faithfulness": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "上下文4逐字包含该主张，直接支持文件日期格式为YYYYMMDD。",
+            "evidence": "文件日期：按原文形成日期著录，格式为YYYYMMDD；日期缺失时不得猜测。"
+          }
+        ],
+        "relevance": [
+          {
+            "index": 0,
+            "verdict": false,
+            "reason": "仅提到“文件日其”且存在错字，未给出日期格式，不能回答格式是什么。",
+            "evidence": ""
+          },
+          {
+            "index": 1,
+            "verdict": false,
+            "reason": "内容为保管期限及冲突案例，与文件日期格式无关。",
+            "evidence": ""
+          },
+          {
+            "index": 2,
+            "verdict": false,
+            "reason": "内容为保管期限冲突处理，与文件日期格式无关。",
+            "evidence": ""
+          },
+          {
+            "index": 3,
+            "verdict": false,
+            "reason": "内容为文件题名和跨页题名规范，未涉及日期格式。",
+            "evidence": ""
+          },
+          {
+            "index": 4,
+            "verdict": true,
+            "reason": "直接说明文件日期著录格式为YYYYMMDD，能回答该问题。",
+            "evidence": "文件日期：按原文形成日期著录，格式为YYYYMMDD；日期缺失时不得猜测。"
+          }
+        ]
+      },
+      "error_type": null
+    },
+    {
+      "id": "G-N03",
+      "origin": "previous_real_display_full_scoped_context",
+      "judgement": {
+        "faithfulness": [
+          {
+            "index": 0,
+            "verdict": true,
+            "reason": "上下文第5条直接给出与claim完全一致的表述。",
+            "evidence": "责任者：按原文署名的发文单位著录，不得用收文单位代替。"
+          }
+        ],
+        "relevance": [
+          {
+            "index": 0,
+            "verdict": false,
+            "reason": "仅涉及文件日期和题名核实，未涉及责任者著录单位。",
+            "evidence": ""
+          },
+          {
+            "index": 1,
+            "verdict": false,
+            "reason": "仅涉及保管期限为十年及适用范围，未涉及责任者。",
+            "evidence": ""
+          },
+          {
+            "index": 2,
+            "verdict": false,
+            "reason": "涉及保管期限冲突处理，未涉及责任者。",
+            "evidence": ""
+          },
+          {
+            "index": 3,
+            "verdict": false,
+            "reason": "涉及题名和日期著录，未涉及责任者。",
+            "evidence": ""
+          },
+          {
+            "index": 4,
+            "verdict": true,
+            "reason": "直接回答责任者应按原文署名的发文单位著录。",
+            "evidence": "责任者：按原文署名的发文单位著录，不得用收文单位代替。"
+          }
+        ]
+      },
+      "error_type": null
+    },
+    {
+      "id": "G-M01",
+      "origin": "previous_real_display_full_scoped_context",
+      "judgement": null,
+      "error_type": "ValueError"
+    },
+    {
+      "id": "G-M03",
+      "origin": "previous_real_display_full_scoped_context",
+      "judgement": null,
+      "error_type": "ValueError"
+    },
+    {
+      "id": "G-C05",
+      "origin": "previous_real_display_full_scoped_context",
+      "judgement": null,
+      "error_type": "ValueError"
+    }
+  ],
+  "limits": [
+    "不同模型裁判，非人工真值；reason为模型意见，引用存在性另做本地校验。",
+    "context_precision是裁判相关片段比例，context_average_precision按排名累积精度；无相关片段的AP为无定义并单列。",
+    "空claims不计算faithfulness，不把拒答记作100%忠实；失败样本另报，不加入成功判断分母。",
+    "历史真实生成只评展示文本，无法恢复原始输出或原始top-k，因此全作用域上下文组与本地检索组分开。",
+    "review_samples.json是待人工复核清单，未声称已由独立业务人员评审；校准标签为开发者构造。"
+  ]
+}

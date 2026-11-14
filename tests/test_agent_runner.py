@@ -23,15 +23,15 @@ def _tool_response(call_id="one", name="kb_sources"):
             "name": name, "arguments": "{}"}}]}}]}
 
 
-def _final_response(content="终结"):
+def _final_response(content='{"answer":"终结","claims":[]}'):
     return {"choices": [{"message": {"role": "assistant", "content": content}}]}
 
 
 def test_runner_selects_tool_then_returns_final_turn(tmp_path):
-    service = FakeChatService([_tool_response(), _final_response()])
+    service = FakeChatService([_tool_response(), _final_response(), _final_response()])
     result = run_agent("查看知识库", KnowledgeIndex(tmp_path / "kb.sqlite3"), service,
                        allow_model_calls=True, max_turns=4)
-    assert service.calls == 2
+    assert service.calls == 3  # one bounded final-contract repair, still hidden
     assert result["tool_calls"] == 1
     assert result["mode"] == "受控 ReAct 工具模式"
     assert result["verified_claims"] == []
@@ -59,11 +59,11 @@ def test_runner_enforces_turn_limit_and_unapproved_is_local_only(tmp_path):
 
 def test_runner_can_choose_a_second_tool_after_reading_first_result(tmp_path):
     service = FakeChatService([_tool_response("manual", "ask_manual"),
-                               _tool_response("sources", "kb_sources"), _final_response()])
+                               _tool_response("sources", "kb_sources"), _final_response(), _final_response()])
     result = run_agent("如何使用并查看资料", KnowledgeIndex(tmp_path / "kb.sqlite3"), service,
                        allow_model_calls=True, max_turns=4)
     assert result["tool_calls"] == 2
-    assert service.calls == 3
+    assert service.calls == 4
 
 
 def test_model_transport_failure_falls_back_to_local_read_tool(tmp_path):

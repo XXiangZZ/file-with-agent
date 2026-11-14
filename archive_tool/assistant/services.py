@@ -1,11 +1,17 @@
 """Optional OpenAI-compatible endpoints; never called without explicit UI consent."""
 import json
 import os
+import threading
+import random
+from time import monotonic, sleep
+from email.utils import parsedate_to_datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from urllib.request import Request, urlopen
 from urllib.parse import urlparse
 from urllib.error import HTTPError, URLError
 from .tracing import traced, emit
+from .runtime import task_budget, number, CircuitOpen, BudgetExceeded
 
 
 class ModelService:
@@ -22,6 +28,19 @@ class ModelService:
             self.timeout = max(1, min(600, int(config.get('timeout', 30))))
         except (TypeError, ValueError):
             raise ValueError('模型超时必须是 1 到 600 秒的整数') from None
+        self.max_retries = number(config, 'max_retries', 1, 0, 3)
+        if not self.max_retries.is_integer():
+            raise ValueError('max_retries必须为整数')
+        self.max_retries = int(self.max_retries)
+        self.retry_backoff = number(config, 'retry_backoff', .25, 0, 10)
+        self.breaker_threshold = number(config, 'breaker_threshold', 3, 1, 20)
+        self.breaker_cooldown = number(config, 'breaker_cooldown', 30, .01, 600)
+        output_tokens = number(config, 'max_output_tokens', 2048, 1, 16384)
+        if not output_tokens.is_integer():
+            raise ValueError('max_output_tokens必须为整数')
+        self.max_output_tokens = int(output_tokens)
+        self._breaker_lock = threading.Lock()
+        self._breaker = {}
         for endpoint in {self.chat_endpoint, self.embedding_endpoint} - {''}:
             parsed = urlparse(endpoint)
             if parsed.scheme not in {'https', 'http'} or not parsed.netloc or parsed.username or parsed.password:
@@ -31,6 +50,10 @@ class ModelService:
 
     @traced('transport')
     def post(self, route, payload):
+        with task_budget(self.config) as budget:
+            return self._post(route, payload, budget)
+
+    def _post(self, route, payload, budget):
         headers = {'Content-Type': 'application/json'}
         embedding = route == '/embeddings'
         endpoint = self.embedding_endpoint if embedding else self.chat_endpoint
@@ -41,25 +64,78 @@ class ModelService:
         key = os.environ.get(key_env, '')
         if key:
             headers['Authorization'] = f'Bearer {key}'
-        request = Request(endpoint + route, data=json.dumps(payload, ensure_ascii=False).encode(), headers=headers)
-        emit('model_request', route='embedding' if embedding else 'chat')
-        try:
-            with urlopen(request, timeout=self.timeout) as response:
-                result = json.load(response)
+        payload = dict(payload)
+        if not embedding:
+            requested = payload.get('max_tokens', self.max_output_tokens)
+            if type(requested) is not int or requested < 1:
+                raise ValueError('max_tokens必须为正整数')
+            payload['max_tokens'] = min(self.max_output_tokens, requested)
+        data = json.dumps(payload, ensure_ascii=False).encode('utf-8')
+        # UTF-8 byte count + fixed envelope is conservative for the usual tokenizers;
+        # it is an estimate, never a provider invoice or exact token guarantee.
+        input_estimate = len(data) + 256
+        output_limit = 0 if embedding else payload['max_tokens']
+        rate_keys = ('embedding_price_per_million',) if embedding else (
+            'input_price_per_million', 'output_price_per_million')
+        if budget.max_cost is not None and any(self.config.get(name) is None for name in rate_keys):
+            raise BudgetExceeded('启用金额护栏需配置当前路由的每百万token价格')
+        rates = [number(self.config, name, 0, 0, 100000) for name in rate_keys]
+        cost = (input_estimate * rates[0] + (output_limit * rates[-1] if not embedding else 0)) / 1000000 \
+            if all(self.config.get(name) is not None for name in rate_keys) else None
+        breaker_key = (endpoint, route)
+        for attempt in range(self.max_retries + 1):
+            with self._breaker_lock:
+                failures, opened_until = self._breaker.get(breaker_key, (0, 0.))
+                if opened_until > monotonic():
+                    emit('circuit_open', route='embedding' if embedding else 'chat')
+                    raise CircuitOpen('模型服务暂时熔断，继续本地处理')
+            budget.reserve(input_estimate + output_limit, cost)
+            request = Request(endpoint + route, data=data, headers=headers)
+            emit('model_request', route='embedding' if embedding else 'chat', attempt=attempt + 1)
+            try:
+                with urlopen(request, timeout=min(self.timeout, budget.remaining())) as response:
+                    result = json.load(response)
+                budget.remaining()
                 usage = result.get('usage', {}) if isinstance(result, dict) else {}
-                emit('model_response', usage={key: usage[key] for key in
-                     ('prompt_tokens', 'completion_tokens', 'total_tokens')
-                     if isinstance(usage, dict) and isinstance(usage.get(key), int)})
+                safe_usage = {name: usage[name] for name in ('prompt_tokens', 'completion_tokens', 'total_tokens')
+                    if isinstance(usage, dict) and type(usage.get(name)) is int and usage[name] >= 0}
+                budget.reported_tokens += safe_usage.get('total_tokens', 0)
+                emit('model_response', usage=safe_usage)
+                with self._breaker_lock:
+                    self._breaker[breaker_key] = (0, 0.)
                 return result
-        except Exception as exc:
-            category = ('timeout' if isinstance(exc, TimeoutError) or
-                        isinstance(getattr(exc, 'reason', None), TimeoutError) else
-                        'http' if isinstance(exc, HTTPError) else
-                        'network' if isinstance(exc, URLError) else
-                        'invalid_json' if isinstance(exc, ValueError) else 'transport')
-            emit('model_error', category=category, error_type=type(exc).__name__)
-            # Do not expose response bodies, request content or credentials in UI/logs.
-            raise RuntimeError('模型服务不可用；请检查服务地址、模型、凭据或超时') from None
+            except BudgetExceeded:
+                raise
+            except Exception as exc:
+                category = ('timeout' if isinstance(exc, TimeoutError) or
+                            isinstance(getattr(exc, 'reason', None), TimeoutError) else
+                            'http' if isinstance(exc, HTTPError) else
+                            'network' if isinstance(exc, (URLError, ConnectionError)) else
+                            'invalid_json' if isinstance(exc, ValueError) else 'transport')
+                transient = category in {'timeout', 'network'} or isinstance(exc, HTTPError) and exc.code in {429, 500, 502, 503, 504}
+                emit('model_error', category=category, error_type=type(exc).__name__, retryable=transient)
+                if transient:
+                    with self._breaker_lock:
+                        failures = self._breaker.get(breaker_key, (0, 0.))[0] + 1
+                        self._breaker[breaker_key] = (failures, monotonic() + self.breaker_cooldown
+                            if failures >= self.breaker_threshold else 0.)
+                if not transient or attempt >= self.max_retries:
+                    raise RuntimeError('模型服务不可用；请检查服务地址、模型、凭据或超时') from None
+                delay = self.retry_backoff * 2 ** attempt + random.uniform(0, self.retry_backoff / 4)
+                if isinstance(exc, HTTPError) and exc.headers:
+                    retry_after = exc.headers.get('Retry-After', '')
+                    try:
+                        delay = max(delay, float(retry_after))
+                    except ValueError:
+                        try:
+                            date = parsedate_to_datetime(retry_after)
+                            delay = max(delay, (date - datetime.now(timezone.utc)).total_seconds())
+                        except (ValueError, TypeError, OverflowError):
+                            pass
+                if delay > 10 or delay >= budget.remaining():
+                    raise BudgetExceeded('退避等待超出任务时间预算') from None
+                emit('model_retry', attempt=attempt + 1, delay_ms=round(delay * 1000))
+                sleep(delay)
 
     def embed_documents(self, texts):
         result = self.post('/embeddings', {'model': self.config['embedding_model'], 'input': texts})
