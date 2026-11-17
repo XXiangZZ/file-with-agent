@@ -176,9 +176,11 @@ class ArchiveRetriever(BaseRetriever):
     bm25_k1: float = Field(default=1.2, gt=0, allow_inf_nan=False)
     bm25_b: float = Field(default=.75, ge=0, le=1, allow_inf_nan=False)
     rrf_k: int = Field(default=60, ge=1, strict=True)
+    ann_eps: float = Field(default=.15, gt=0, le=1, allow_inf_nan=False)
+    ann_oversample: int = Field(default=4, ge=1, le=32, strict=True)
 
     def _get_relevant_documents(self, query, *, run_manager):
-        if self.mode not in {'keyword', 'hybrid', 'bm25_rrf'}:
+        if self.mode not in {'keyword', 'hybrid', 'bm25_rrf', 'ann'}:
             raise ValueError('未知的检索模式')
         intent = route_intent(query)
         effective_kinds = self.kinds
@@ -187,6 +189,28 @@ class ArchiveRetriever(BaseRetriever):
         elif effective_kinds is None and intent == 'field':
             effective_kinds = ['规范']
         rewritten = rewrite_query(query)
+        if self.mode == 'ann':
+            if self.embeddings is None:
+                raise ValueError('ANN检索需要用户明确启用并配置嵌入模型')
+            if not query.strip():
+                return []
+            selection = self.index.ann_selection(self.scope, effective_kinds,
+                                                getattr(self.embeddings, 'model_name', None))
+            if not selection[2]:
+                retrieval_event([], self.mode, self.k)
+                return []
+            query_vector = self.embeddings.embed_query(rewritten)
+            candidates = self.index.ann_search(self.scope, effective_kinds, query_vector,
+                getattr(self.embeddings, 'model_name', None), max(self.k, self.k * self.ann_oversample), self.ann_eps)
+            reranked = []
+            for doc in candidates:
+                score = local_rerank(query, rewritten, doc, doc.metadata['retrieval_score'], intent)
+                doc.metadata.update(rerank_score=score, intent=intent, rewritten_query=rewritten)
+                reranked.append((score, doc))
+            result = [doc for _, doc in sorted(reranked,
+                key=lambda row: (-row[0], row[1].metadata['id']))[:self.k]]
+            retrieval_event(result, self.mode, self.k)
+            return result
         use_vectors = self.embeddings is not None and self.mode != 'keyword'
         persisted = self.index.vector_rows(self.scope, effective_kinds,
             expected_model=getattr(self.embeddings, 'model_name', None)) if use_vectors else []

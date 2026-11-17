@@ -262,7 +262,8 @@ def grounded_answer(query, docs, service):
 def ask(index, query, scope='通用', mode=None, embeddings=None, service=None):
     mode = mode or retrieval_mode()
     def make_chain(active_embeddings, active_service):
-        retriever = ArchiveRetriever(index=index, scope=scope, mode=mode,
+        retriever = ArchiveRetriever(index=index, scope=scope,
+                                     mode='hybrid' if mode == 'ann' and active_embeddings is None else mode,
                                      embeddings=active_embeddings)
         return retriever | RunnableLambda(lambda docs: grounded_answer(query, docs, active_service)
             if active_service and active_service.config.get('chat_model')

@@ -11,6 +11,6 @@ def evidence_mode():
 
 def retrieval_mode():
     value = os.environ.get('ARCHIVE_RAG_RETRIEVAL', 'hybrid')
-    if value not in {'keyword', 'hybrid', 'bm25_rrf'}:
-        raise ValueError('ARCHIVE_RAG_RETRIEVAL 必须为 keyword、hybrid 或 bm25_rrf')
+    if value not in {'keyword', 'hybrid', 'bm25_rrf', 'ann'}:
+        raise ValueError('ARCHIVE_RAG_RETRIEVAL 必须为 keyword、hybrid、bm25_rrf 或 ann')
     return value

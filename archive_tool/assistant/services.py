@@ -139,8 +139,12 @@ class ModelService:
 
     def embed_documents(self, texts):
         result = self.post('/embeddings', {'model': self.config['embedding_model'], 'input': texts})
+        return self._embedding_vectors(result, len(texts))
+
+    @staticmethod
+    def _embedding_vectors(result, count):
         rows = sorted(result['data'], key=lambda row: row['index'])
-        if len(rows) != len(texts):
+        if len(rows) != count:
             raise ValueError('嵌入服务返回数量不匹配')
         vectors = [row['embedding'] for row in rows]
         import math

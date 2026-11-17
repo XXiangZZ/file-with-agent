@@ -3,6 +3,9 @@ import hashlib
 import json
 import math
 import sqlite3
+import threading
+import os
+import tempfile
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -18,6 +21,8 @@ class KnowledgeIndex:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.parser = parser or Parser()
+        self._ann_cache = {}
+        self._ann_lock = threading.Lock()
         with self.connect() as db:
             db.executescript('''
                 CREATE TABLE IF NOT EXISTS sources (
@@ -51,6 +56,32 @@ class KnowledgeIndex:
         with self.connect() as db:
             return [dict(zip(('path', 'digest', 'kind', 'scope', 'imported', 'version'), row))
                     for row in db.execute('SELECT * FROM sources ORDER BY path')]
+
+    def revision(self):
+        # Changes from other index instances or processes invalidate cached trees
+        # and conversation scope. WAL is included if a caller enables WAL mode.
+        def stamp(path):
+            try:
+                stat = path.stat()
+                return stat.st_mtime_ns, stat.st_ctime_ns, stat.st_size
+            except FileNotFoundError:
+                return None
+        return stamp(self.path), stamp(Path(str(self.path) + '-wal'))
+
+    def _invalidate_ann(self):
+        with self._ann_lock:
+            self._ann_cache.clear()
+        directory = self.path.with_suffix(self.path.suffix + '.ann')
+        # Derived files only; never traverse/delete an arbitrary directory tree.
+        if directory.is_dir() and not directory.is_symlink():
+            for path in directory.glob('*.npz'):
+                if len(path.stem) == 64 and all(char in '0123456789abcdef' for char in path.stem):
+                    try:
+                        path.unlink(missing_ok=True)
+                    except OSError:
+                        # Revision checking prevents reuse even if an external
+                        # reader holds a snapshot open on Windows.
+                        pass
 
     def import_file(self, path, kind='规范', scope='通用', progress=lambda message: None, force=False, embeddings=None):
         path = str(Path(path).resolve())
@@ -100,13 +131,16 @@ class KnowledgeIndex:
                     db.execute('INSERT INTO vectors VALUES (?,?,?,?)',
                                (identity, vector, model, dimension))
             db.execute('DELETE FROM vectors WHERE chunk_id NOT IN (SELECT id FROM chunks)')
+        self._invalidate_ann()
         return f'已索引 {len(docs)} 页 / {len(chunks)} 片段'
 
     def delete(self, path):
+        path = str(Path(path).resolve())
         with self.connect() as db:
             db.execute('DELETE FROM chunks WHERE source=?', (path,))
             db.execute('DELETE FROM vectors WHERE chunk_id NOT IN (SELECT id FROM chunks)')
             db.execute('DELETE FROM sources WHERE path=?', (path,))
+        self._invalidate_ann()
 
     def _vector_count(self, source):
         with self.connect() as db:
@@ -156,6 +190,7 @@ class KnowledgeIndex:
             for (chunk_id, _), vector in zip(rows, vectors):
                 db.execute('INSERT INTO vectors VALUES (?,?,?,?)',
                            (chunk_id, json.dumps(vector), model, len(vector)))
+        self._invalidate_ann()
         progress(f'已完成索引向量：{len(rows)} 个分块')
 
     def vector_rows(self, scope, kinds=None, expected_model=None):
@@ -176,6 +211,122 @@ class KnowledgeIndex:
                 raise ValueError('持久化向量维度异常，请重建索引')
         return [(doc, rows[doc.metadata['id']][0] if doc.metadata['id'] in rows else None)
                 for doc in docs]
+
+    def ann_selection(self, scope, kinds, expected_model):
+        """Validate index/model before any optional query embedding request."""
+        if not expected_model:
+            raise ValueError('ANN检索必须指定当前嵌入模型')
+        params = [scope, '通用']
+        sql = """FROM chunks c JOIN sources s ON s.path=c.source
+                 LEFT JOIN vectors v ON v.chunk_id=c.id
+                 WHERE s.scope IN (?,?) AND s.kind!='样例'"""
+        if kinds is not None:
+            sql += ' AND s.kind IN (' + ','.join('?' for _ in kinds) + ')'
+            params.extend(kinds)
+        with self.connect() as db:
+            if db.execute('SELECT COUNT(*) FROM sources WHERE version != ?', (VERSION,)).fetchone()[0]:
+                raise ValueError('索引版本已失效，请重建索引')
+            total, vector_count, max_row, min_dim, max_dim = db.execute(
+                'SELECT COUNT(*),COUNT(v.chunk_id),MAX(v.rowid),MIN(v.dimension),MAX(v.dimension) ' + sql,
+                params).fetchone()
+            if not total:
+                return sql, params, 0, max_row, min_dim
+            if total != vector_count or min_dim != max_dim:
+                raise ValueError('ANN索引缺少向量或维度不一致，请按当前嵌入模型重建')
+            models = {row[0] for row in db.execute(
+                'SELECT DISTINCT v.model ' + sql + ' AND v.model IS NOT NULL', params)}
+            if models != {expected_model}:
+                raise ValueError('ANN向量模型与当前查询模型不一致')
+        return sql, params, total, max_row, min_dim
+
+    def ann_search(self, scope, kinds, query_vector, expected_model, limit, eps=.15):
+        """Approximate cosine neighbors with SQLite-authoritative tree snapshots."""
+        import numpy as np
+        from scipy.spatial import cKDTree
+        if not 0 < eps <= 1 or limit < 1:
+            raise ValueError('ANN近似参数或候选数无效')
+        sql, params, total, max_row, min_dim = self.ann_selection(scope, kinds, expected_model)
+        if not total:
+            return []
+        revision = self.revision()
+        cache_key = (scope, tuple(kinds) if kinds is not None else None, expected_model,
+                     revision, total, max_row, min_dim)
+        with self._ann_lock:
+            cached = self._ann_cache.get(cache_key)
+        if cached is None:
+            snapshot_dir = self.path.with_suffix(self.path.suffix + '.ann')
+            if snapshot_dir.is_symlink():
+                raise ValueError('ANN快照目录不能为符号链接')
+            name = hashlib.sha256(json.dumps(cache_key[:3], ensure_ascii=False).encode('utf-8')).hexdigest() + '.npz'
+            snapshot = snapshot_dir / name
+            if snapshot.is_symlink():
+                raise ValueError('ANN快照不能为符号链接')
+            vectors, docs = None, None
+            if snapshot.is_file():
+                try:
+                    with np.load(snapshot, allow_pickle=False) as saved:
+                        if saved['revision'].item() == json.dumps(revision) and saved['model'].item() == expected_model:
+                            vectors = saved['vectors'].copy()
+                            texts, metadata = saved['texts'].tolist(), saved['metadata'].tolist()
+                            docs = [Document(page_content=text, metadata=json.loads(meta)) for text, meta in zip(texts, metadata)]
+                            if len(docs) != total or len(vectors) != total:
+                                vectors, docs = None, None
+                except (ValueError, OSError, KeyError, TypeError):
+                    vectors, docs = None, None
+            if vectors is None:
+                with self.connect() as db:
+                    rows = db.execute('SELECT c.id,c.text,c.metadata,v.vector,v.dimension,v.model ' + sql +
+                                      ' ORDER BY c.id', params).fetchall()
+                if len(rows) != total or any(row[5] != expected_model or row[4] != min_dim for row in rows):
+                    raise ValueError('构建ANN快照时向量发生变化，请重试')
+                vectors = np.asarray([json.loads(row[3]) for row in rows], dtype=np.float32)
+                docs = [Document(page_content=row[1], metadata=json.loads(row[2])) for row in rows]
+            if vectors.ndim != 2 or vectors.shape[1] != min_dim or not np.isfinite(vectors).all():
+                raise ValueError('ANN向量快照格式无效')
+            norms = np.linalg.norm(vectors, axis=1)
+            if np.any(norms <= 0):
+                raise ValueError('ANN索引不接受零向量，请重建嵌入')
+            vectors /= norms[:, None]
+            cached = (cKDTree(vectors, compact_nodes=True, balanced_tree=True), docs)
+            if self.revision() != revision:
+                raise ValueError('构建ANN期间索引已变化，请重试')
+            snapshot_dir.mkdir(exist_ok=True)
+            descriptor, temporary = tempfile.mkstemp(prefix='snapshot-', suffix='.npz', dir=snapshot_dir)
+            try:
+                with os.fdopen(descriptor, 'wb') as output:
+                    np.savez_compressed(output, revision=json.dumps(revision), model=expected_model,
+                        vectors=vectors, texts=np.asarray([doc.page_content for doc in docs]),
+                        metadata=np.asarray([json.dumps(doc.metadata, ensure_ascii=False) for doc in docs]))
+                os.replace(temporary, snapshot)
+            finally:
+                if os.path.exists(temporary):
+                    os.unlink(temporary)
+            with self._ann_lock:
+                self._ann_cache = {key: value for key, value in self._ann_cache.items()
+                                   if key[:3] != cache_key[:3]}
+                self._ann_cache[cache_key] = cached
+                while len(self._ann_cache) > 8:
+                    self._ann_cache.pop(next(iter(self._ann_cache)))
+        tree, docs = cached
+        query = np.asarray(query_vector, dtype=np.float32)
+        if query.ndim != 1 or query.size != min_dim or not np.isfinite(query).all():
+            raise ValueError('问题向量维度或数值与ANN索引不一致')
+        norm = float(np.linalg.norm(query))
+        if norm <= 0:
+            raise ValueError('ANN问题向量不能为零向量')
+        distances, positions = tree.query(query / norm, k=min(limit, len(docs)), eps=eps, workers=1)
+        distances, positions = np.atleast_1d(distances), np.atleast_1d(positions)
+        results = []
+        for rank, (distance, position) in enumerate(zip(distances, positions), 1):
+            if position >= len(docs) or not math.isfinite(float(distance)):
+                continue
+            doc = docs[int(position)].model_copy(deep=True)
+            doc.metadata.update(retrieval_score=max(-1., min(1., 1. - float(distance) ** 2 / 2)),
+                                ann_rank=rank, retrieval_method='ann')
+            results.append(doc)
+        if self.revision() != revision:
+            raise ValueError('ANN查询期间索引已变化，请重试')
+        return results
 
     def vector_state(self, source, expected_model=None):
         with self.connect() as db:

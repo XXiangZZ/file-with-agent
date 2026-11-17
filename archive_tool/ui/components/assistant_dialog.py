@@ -1,5 +1,7 @@
 """Modal assistant keeps the current record stable while OCR runs in a worker."""
 import json
+import asyncio
+import inspect
 from pathlib import Path
 from PySide6.QtCore import QThread, Signal, Qt
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
@@ -17,16 +19,35 @@ class Work(QThread):
     result = Signal(object)
     failed = Signal(str)
     progress = Signal(str)
+    verified_chunk = Signal(str)
 
     def __init__(self, task, parent=None):
         super().__init__(parent)
         self.task = task
+        self.loop = None
+        self.async_task = None
+
+    def cancel(self):
+        if self.loop and self.async_task:
+            self.loop.call_soon_threadsafe(self.async_task.cancel)
 
     def run(self):
         try:
-            self.result.emit(self.task(self.progress.emit))
+            result = self.task(self.progress.emit)
+            if inspect.isawaitable(result):
+                async def execute():
+                    self.loop = asyncio.get_running_loop()
+                    self.async_task = asyncio.current_task()
+                    return await result
+                result = asyncio.run(execute())
+            self.result.emit(result)
+        except asyncio.CancelledError:
+            self.progress.emit('本轮问答已取消；未执行任何计划。')
         except Exception as exc:
             self.failed.emit(f'{type(exc).__name__}: {exc}')
+        finally:
+            self.loop = None
+            self.async_task = None
 
 
 class AssistantDialog(QDialog):
@@ -35,6 +56,8 @@ class AssistantDialog(QDialog):
         self.entry = entry
         self.index = KnowledgeIndex(DATA_DIR / 'knowledge.sqlite3')
         self.worker = None
+        from assistant.agent.session import AgentSession
+        self.session = AgentSession()
         self.suggestions = []
         self.originals = []
         self.setWindowTitle('档案著录智能辅助工作台')
@@ -61,6 +84,26 @@ class AssistantDialog(QDialog):
         layout.addWidget(self.sources)
         self.external = QCheckBox('本次窗口允许发送问题、知识库证据和工具参数到配置服务；不会自动读取档案字段或扫描件')
         layout.addWidget(self.external)
+        options = QHBoxLayout()
+        self.streaming = QCheckBox('流式接收；核验后逐段显示')
+        self.streaming.setChecked(True)
+        self.retrieval_backend = QComboBox()
+        self.retrieval_backend.addItem('默认混合检索', None)
+        self.retrieval_backend.addItem('ANN近似向量检索（需已有向量）', 'ann')
+        self.remember = QCheckBox('本窗口记住已核验对话（关闭窗口即清空）')
+        self.clear_memory = QPushButton('清空对话记忆')
+        self.clear_memory.clicked.connect(self.reset_memory)
+        self.remember.toggled.connect(lambda _: self.reset_memory())
+        for option in (self.streaming, self.remember, self.clear_memory):
+            options.addWidget(option)
+            self.controls.append(option)
+        layout.addLayout(options)
+        layout.addWidget(self.retrieval_backend)
+        self.controls.append(self.retrieval_backend)
+        self.cancel_button = QPushButton('取消当前问答')
+        self.cancel_button.setEnabled(False)
+        self.cancel_button.clicked.connect(self.cancel_question)
+        layout.addWidget(self.cancel_button)
         self.service_label = QLabel()
         layout.addWidget(self.service_label)
         try:
@@ -164,12 +207,14 @@ class AssistantDialog(QDialog):
         self.status.setText('处理中；OCR 初始化及扫描识别可能较慢，请等待。')
         self.worker = Work(task, self)
         self.worker.progress.connect(self.status.setText)
+        self.worker.verified_chunk.connect(self.output.insertPlainText)
         self.worker.result.connect(callback)
         self.worker.failed.connect(lambda message: self.output.setPlainText('操作失败；已有索引保留。\n' + message))
         self.worker.finished.connect(self.finished_work)
         self.worker.start()
 
     def finished_work(self):
+        self.cancel_button.setEnabled(False)
         for widget in self.controls + [self.scope, self.kind, self.external, self.question,
                                        self.agent_mode, self.local_tool]:
             widget.setEnabled(True)
@@ -231,15 +276,30 @@ class AssistantDialog(QDialog):
             template = self.entry.current_template
             template_name = template.get('name', scope) if isinstance(template, dict) else (template or scope)
             local_tool = self.local_tool.currentData()
-            def task(progress):
+            self.output.clear()
+            self.cancel_button.setEnabled(True)
+            stream, remember = self.streaming.isChecked(), self.remember.isChecked()
+            retrieval_mode = self.retrieval_backend.currentData()
+            from assistant.agent.session import AgentSession
+            active_session = self.session if remember else AgentSession()
+            async def task(progress):
+                from assistant.async_api import arun_agent
                 managers = (RecordManager(), DraftManager(), TemplateManager())
-                service = ModelService(self.config) if external and self.config.get('chat_model') else None
+                service = ModelService({**self.config, 'retrieval_mode': retrieval_mode}) if external and self.config.get('chat_model') else None
                 try:
-                    result = run_agent(query, self.index, service,
+                    result = await arun_agent(query, self.index, service,
                         allow_model_calls=bool(external and service),
                         record_manager=managers[0], draft_manager=managers[1],
                         template_manager=managers[2], batch_id=batch_id,
-                        template_name=template_name, local_tool=local_tool)
+                        template_name=template_name, local_tool=local_tool,
+                        session=active_session, stream=stream,
+                        progress=lambda event: progress('正在接收模型输出，核验后显示…' if event['type'] == 'receiving'
+                            else f"正在执行第 {event.get('turn', 1)} 轮…"))
+                except asyncio.CancelledError:
+                    store = active_session.plan_store
+                    return {'answer': '本轮已取消，未执行任何计划；已有待确认计划仍需人工处理。',
+                        'citations': [], 'plans': [plan.to_dict() for plan in store.get_pending()] if store else [],
+                        '_plan_store': store, 'model_used': False, 'tool_calls': 0, 'mode': '问答已取消'}
                 except Exception as exc:
                     result = run_agent(query, self.index, None, allow_model_calls=False,
                         record_manager=managers[0], draft_manager=managers[1],
@@ -247,15 +307,26 @@ class AssistantDialog(QDialog):
                         template_name=template_name, local_tool=local_tool)
                     result['notice'] = '模型不可用，已退回所选本地只读工具。'
                     result['fallback_reason'] = type(exc).__name__
+                if external and stream:
+                    try:
+                        await self.publish_verified(result.get('verified_answer') or result['answer'])
+                    except asyncio.CancelledError:
+                        result['notice'] = '已停止逐段展示，已核验结果与计划仍保留。'
                 return result
             self.start(task, self.show_agent_result)
             return
-        def task(progress):
+        self.output.clear()
+        self.cancel_button.setEnabled(True)
+        stream = self.streaming.isChecked()
+        retrieval_mode = self.retrieval_backend.currentData()
+        async def task(progress):
+            from assistant.async_api import aask
             try:
                 service = ModelService(self.config) if external else None
-                result = ask(self.index, query, scope,
-                             embeddings=service if service and self.config.get('embedding_model') else None,
-                             service=service)
+                result = await aask(self.index, query, scope, service=service,
+                    use_embeddings=bool(service and self.config.get('embedding_model')), stream=stream,
+                    mode=retrieval_mode,
+                    progress=lambda _: progress('正在接收模型输出，核验后显示…'))
             except Exception as exc:
                 self.index.record_feedback(query, scope=scope, failure=type(exc).__name__)
                 if not external:
@@ -265,8 +336,30 @@ class AssistantDialog(QDialog):
             if result.get('notice'):
                 self.index.record_feedback(query, result.get('answer', ''), result.get('citations', []),
                                            scope, failure='service_fallback')
+            if external and stream:
+                await self.publish_verified(self.render_answer(result))
             return self.render_answer(result), result, query, scope
         self.start(task, self.show_answer)
+
+    def reset_memory(self):
+        try:
+            self.session.clear()
+        except RuntimeError:
+            if hasattr(self, 'status'):
+                self.status.setText('请先结束当前任务并处理计划，再清空记忆。')
+
+    def cancel_question(self):
+        if self.worker and self.worker.isRunning():
+            self.worker.cancel()
+            self.cancel_button.setEnabled(False)
+            self.status.setText('正在取消请求并清理本轮上下文…')
+
+    async def publish_verified(self, text):
+        # The only body chunks sent to the UI are from the completed verifier.
+        # Raw SSE text and fragmented tool arguments never enter this signal.
+        for offset in range(0, len(text), 80):
+            self.worker.verified_chunk.emit(text[offset:offset + 80])
+            await asyncio.sleep(.005)
 
     def show_agent_result(self, result):
         self._plan_store = result.get('_plan_store')
@@ -435,4 +528,7 @@ class AssistantDialog(QDialog):
         if self.worker and self.worker.isRunning():
             self.status.setText('正在处理，请等待完成后关闭，以免中断 OCR 或索引事务。')
             return
+        self.reject_plans()
+        self.session.clear()
+        self._plan_store = None
         super().reject()

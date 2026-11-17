@@ -20,6 +20,7 @@ dist/
 archive_tool/data/archive.db
 .pytest_cache/
 archive_tool/data/knowledge.sqlite3*
+archive_tool/data/*.ann/
 archive_tool/config/assistant.local.json
 archive_tool/data/logs/*.jsonl*
 evaluation/p0_traces.jsonl*

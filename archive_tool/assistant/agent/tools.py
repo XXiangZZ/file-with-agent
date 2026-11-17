@@ -99,7 +99,8 @@ def build_tools(index, service=None, record_manager=None, draft_manager=None,
     def policy(question: str, scope: str = "通用"):
         scope = template_name if scope == '通用' and template_name else scope
         embeddings = service if allow_model_calls and service and getattr(service, 'embedding_model', '') else None
-        result = ask_policy(index, question, scope, embeddings=embeddings)
+        mode = getattr(service, 'config', {}).get('retrieval_mode') if service else None
+        result = ask_policy(index, question, scope, embeddings=embeddings, mode=mode)
         result["citations"] = _safe_citations(result.get("citations", []))
         return _json(result)
 
@@ -107,8 +108,9 @@ def build_tools(index, service=None, record_manager=None, draft_manager=None,
 
     def manual(question: str):
         embeddings = service if allow_model_calls and service and getattr(service, 'embedding_model', '') else None
+        mode = (getattr(service, 'config', {}).get('retrieval_mode') or 'hybrid') if service else 'hybrid'
         result = ask_manual(index, question, service=embeddings,
-                            use_embeddings=bool(embeddings), mode="hybrid",
+                            use_embeddings=bool(embeddings), mode=mode,
                             generate=False)
         result["citations"] = _safe_citations(result.get("citations", []))
         return _json(result)

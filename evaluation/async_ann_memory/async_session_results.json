@@ -1,0 +1,27 @@
+{
+  "external_model_calls": 0,
+  "local_http_requests": 4,
+  "stream_progress_events": 16,
+  "progress_contains_body": false,
+  "memory_present_on_followup": true,
+  "all_answers_verified": true,
+  "answers": [
+    {
+      "verified": true,
+      "answer": "知识库共有 1 份资料。",
+      "session_turns": 1,
+      "requests": 2
+    },
+    {
+      "verified": true,
+      "answer": "知识库共有 1 份资料。",
+      "session_turns": 2,
+      "requests": 2
+    }
+  ],
+  "elapsed_ms": 520.5705999997008,
+  "limits": [
+    "本机合成OpenAI兼容HTTP服务，证明异步/SSE/会话贯通，不证明真实厂商SSE兼容性或多轮指代能力。",
+    "不读取生产archive.db；只读kb_sources，无计划执行；网络仅127.0.0.1回环。"
+  ]
+}

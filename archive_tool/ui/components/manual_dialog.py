@@ -1,4 +1,5 @@
 """Visible manual QA entry; no archive values or executable tools are accessed."""
+import asyncio
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
     QLineEdit, QPushButton, QTextEdit, QComboBox, QCheckBox, QFileDialog)
@@ -98,6 +99,7 @@ class ManualDialog(QDialog):
         self.set_busy(True)
         self.worker = Work(task, self)
         self.worker.progress.connect(self.status.setText)
+        self.worker.verified_chunk.connect(self.output.insertPlainText)
         self.worker.result.connect(callback)
         self.worker.failed.connect(self.show_error)
         self.worker.finished.connect(lambda: self.set_busy(False))
@@ -126,17 +128,22 @@ class ManualDialog(QDialog):
             return
         external = self.external.isChecked()
         self.status.setText('正在查找与问题相关的操作步骤…')
-        def task(progress):
+        self.output.clear()
+        async def task(progress):
+            from assistant.async_api import aask_manual, invoke_async
             if not external:
-                result = ask_manual(self.index, query)
+                result = await aask_manual(self.index, query)
             else:
                 try:
                     service = ModelService(self.config)
                     use_embeddings = bool(self.config.get('embedding_model'))
                     if use_embeddings:
-                        prepare_manual(self.index, get_resource_path('resources/manual'), progress,
-                                       embeddings=service)
-                    result = ask_manual(self.index, query, service, use_embeddings=use_embeddings)
+                        def prepare(active_index, *, service):
+                            return prepare_manual(active_index, get_resource_path('resources/manual'), progress,
+                                                  embeddings=service)
+                        await invoke_async(prepare, self.index, service=service, stream=False)
+                    result = await aask_manual(self.index, query, service=service, use_embeddings=use_embeddings,
+                        progress=lambda _: progress('正在接收手册回答，核验后显示…'))
                 except Exception as exc:
                     self.index.record_feedback(query, scope=SCOPE, failure=type(exc).__name__)
                     result = ask_manual(self.index, query)
@@ -146,6 +153,10 @@ class ManualDialog(QDialog):
                                            SCOPE, failure='service_fallback')
             result['_question'] = query
             result['_scope'] = SCOPE
+            if external:
+                for offset in range(0, len(result['answer']), 80):
+                    self.worker.verified_chunk.emit(result['answer'][offset:offset + 80])
+                    await asyncio.sleep(.005)
             return result
         self.start(task, self.show_result)
 

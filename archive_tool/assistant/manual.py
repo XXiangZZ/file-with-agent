@@ -125,6 +125,8 @@ def ask_manual(index, query, service=None, use_embeddings=False, k=4, mode=None,
     if not query:
         raise ValueError('请输入操作问题')
     mode = mode or retrieval_mode()
+    if mode == 'ann' and not use_embeddings:
+        mode = 'hybrid'
     retriever = ArchiveRetriever(index=index, scope=SCOPE, kinds=['手册'], k=k,
         mode=mode, embeddings=service if use_embeddings else None)
     retrieval_chain = RunnableLambda(normalize_question) | retriever

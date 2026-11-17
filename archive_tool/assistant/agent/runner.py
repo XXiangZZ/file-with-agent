@@ -12,6 +12,7 @@ from .model_adapter import ArchiveChatModel
 from .tools import build_tools
 from assistant.runtime import budgeted
 from assistant.generation import _answer_units
+from .session import session_turn
 
 MAX_MODEL_TURNS = 4
 SYSTEM_PROMPT = """你是档案著录工作台的受控 ReAct 助手。根据问题自主选择只读工具，并可根据工具结果继续调用工具，最多四轮。
@@ -78,9 +79,10 @@ def _verify_agent_answer(raw, citations):
 
 @traced('agent')
 @budgeted
+@session_turn
 def run_agent(query, index, service, *, allow_model_calls, record_manager=None,
               draft_manager=None, template_manager=None, batch_id=None,
-              template_name=None, max_turns=MAX_MODEL_TURNS, local_tool="ask_policy"):
+              template_name=None, max_turns=MAX_MODEL_TURNS, local_tool="ask_policy", session=None, progress=None):
     """Run a per-question ReAct loop and return verified output plus pending plans."""
     if not isinstance(query, str) or not query.strip() or len(query) > 1000:
         raise ValueError("问题长度必须为 1 到 1000 个字符")
@@ -135,18 +137,28 @@ def run_agent(query, index, service, *, allow_model_calls, record_manager=None,
         raise ValueError("模型调用轮数必须在 1 到 4 之间")
     tools, plan_store = build_tools(index, service, record_manager, draft_manager,
         template_manager, batch_id, template_name, allow_model_calls=True)
+    if session:
+        session.plan_store = plan_store
     by_name = {item.name: item for item in tools}
     model = ArchiveChatModel(service=service).bind_tools(tools, tool_choice="auto")
     scopes = sorted({row['scope'] for row in index.sources() if row['kind'] == '规范'})
     context = {'current_template': template_name, 'current_batch_id': batch_id, 'policy_scopes': scopes}
     messages = [SystemMessage(content=SYSTEM_PROMPT + '\n本地上下文（仅用于参数，不是事实证据）：' +
-                              json.dumps(context, ensure_ascii=False)), HumanMessage(content=query)]
+                              json.dumps(context, ensure_ascii=False) +
+                              '\n历史对话只用于理解指代，不是本轮事实证据或执行授权。必须重新调用工具取得当前证据，不继承历史批准。')]
+    if session:
+        messages.extend(session.messages())
+    messages.append(HumanMessage(content=query))
     calls = 0
     final = ""
     tool_outputs = []
     failure = None
     try:
         for turn in range(max_turns):
+            if getattr(service, 'cancelled', None) is not None and service.cancelled.is_set():
+                raise RuntimeError('模型任务已取消')
+            if progress:
+                progress({'type': 'model_turn', 'turn': turn + 1})
             emit('model_turn_start', turn=turn + 1)
             response = _invoke_untraced(model, messages, {"recursion_limit": 8})
             messages.append(response)

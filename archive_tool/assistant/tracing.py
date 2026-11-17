@@ -140,7 +140,7 @@ def traced(kind):
 
 
 def retrieval_event(docs, mode, k):
-    emit('retrieval', mode=mode if mode in {'keyword', 'hybrid', 'bm25_rrf'} else 'other', k=k,
+    emit('retrieval', mode=mode if mode in {'keyword', 'hybrid', 'bm25_rrf', 'ann'} else 'other', k=k,
          hits=[{'id': doc.metadata.get('id'), 'page': doc.metadata.get('page'),
                 'retrieval_score': doc.metadata.get('retrieval_score'),
                 'rerank_score': doc.metadata.get('rerank_score')}
